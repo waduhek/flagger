@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+option go_package = "github.com/waduhek/flagger/proto/authpb";
+
+package authpb;
+
+service Auth {
+  // CreateNewUser creates a new user.
+  rpc CreateNewUser(CreateNewUserRequest) returns (CreateNewUserResponse);
+
+  // Login authenticates a user with their username and password. Returns a JWT
+  // for authentication with other endpoints.
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // ChangePassword changes the user's current password.
+  //
+  // Requires authentication via the JWT returned by the login API.
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+}
+
+// === CreateNewUser Messages ===
+
+// The request to create a new user.
+message CreateNewUserRequest {
+  // The username selected by the user.
+  string username = 1;
+  // The full name of the user.
+  string name = 2;
+  // The email address of the user.
+  string email = 3;
+  // The password selected by the user.
+  string password = 4;
+}
+
+message CreateNewUserResponse {
+}
+
+// === Login Messages ===
+
+// The request to login a user.
+message LoginRequest {
+  // The username of the user.
+  string username = 1;
+  // The password entered by the user.
+  string password = 2;
+}
+
+// The response of successfully logging in a user.
+message LoginResponse {
+  // The JWT generated for the user to be used for authentication with other
+  // endpoints.
+  string token = 1;
+}
+
+// === ChangePassword Messages ===
+
+// The request to change the user's password.
+message ChangePasswordRequest {
+  // The current password of the user.
+  string current_password = 1;
+  // The new password the user want's to set.
+  string new_password = 2;
+}
+
+message ChangePasswordResponse {
+}
+
+
+// === ResetPassword Messages ===
+
+message ResetPasswordRequest {
+}
+
+message ResetPasswordResponse {
+}

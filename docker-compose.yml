@@ -1,0 +1,46 @@
+services:
+  mongo:
+    image: mongo
+    container_name: flagger-mongo
+    expose:
+      - 27017
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: flagger
+    volumes:
+      - ./_docker/mongo:/data/db
+
+  redis:
+    image: redis
+    container_name: flagger-redis
+    expose:
+      - 6379
+    ports:
+      - 6379:6379
+    volumes:
+      - ./_docker/redis:/data
+
+  flagger-debug:
+    image: waduhek/flagger:debug
+    container_name: flagger-debug
+    pull_policy: never
+    expose:
+      - 4040
+      - 50051
+    ports:
+      - 4040:4040
+      - 50051:50051
+    env_file: .env
+
+  flagger-dev:
+    image: waduhek/flagger:dev
+    container_name: flagger-dev
+    pull_policy: never
+    expose:
+      - 50051
+    ports:
+      - 50051:50051
+    env_file: .env

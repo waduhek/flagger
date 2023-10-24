@@ -1,0 +1,11 @@
+# Docker bind mount directory
+_docker
+
+# Build artifacts
+build
+
+# Environment variables
+.env
+
+# Miscellaneous files and directory
+.DS_Store

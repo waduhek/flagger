@@ -1,0 +1,17 @@
+# Git directory
+.git
+
+# Docker bind mount directory
+_docker
+
+# Sample environment variables
+sample.env
+
+# Editorconfig file
+.editorconfig
+
+# Mardown files
+*.md
+
+# Miscellaneous files and directories
+.DS_Store
