@@ -118,5 +118,7 @@ func main() {
 	})
 
 	log.Printf("flagger server listening at %q", lis.Addr().String())
-	grpcServer.Serve(lis)
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("could not serve: %v", err)
+	}
 }
