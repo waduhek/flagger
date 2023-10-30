@@ -2,8 +2,9 @@
 FROM golang:1.21.3 as dev
 WORKDIR /go/github.com/waduhek/flagger
 COPY . .
+RUN go build -o ./build/flagger ./cmd/flagger
 EXPOSE 50051
-CMD ["go", "run", "./cmd/flagger"]
+CMD ["./build/flagger"]
 
 # --- Debug container image ---
 FROM golang:1.21.3 as debug
