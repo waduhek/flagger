@@ -40,3 +40,12 @@ run-dev:
 		-p 50051:50051 \
 		--name flagger-dev \
 		waduhek/flagger:dev
+
+# --- Testing and benchmarking targets ---
+.PHONY: test
+test:
+	go test ./...
+
+.PHONY: bench
+bench:
+	go test -bench=. -run=^# -count=5 -benchmem ./...
