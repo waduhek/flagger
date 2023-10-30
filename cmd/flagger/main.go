@@ -115,6 +115,8 @@ func main() {
 		if err := mongoClient.Disconnect(ctx); err != nil {
 			log.Panicf("could not disconnect from mongodb: %v", err)
 		}
+
+		grpcServer.GracefulStop()
 	})
 
 	log.Printf("flagger server listening at %q", lis.Addr().String())
