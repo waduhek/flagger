@@ -1,4 +1,4 @@
-package auth
+package utils
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
-type passwordHashDetails struct {
+type PasswordHashDetails struct {
 	Hash []byte
 	Salt []byte
 }
@@ -42,10 +42,10 @@ func generateRandomSalt() ([]byte, error) {
 
 // generatePasswordHash hashes the provided password returning the hash
 // generated and the random salt that was used for hashing the password.
-func generatePasswordHash(password string) (passwordHashDetails, error) {
+func GeneratePasswordHash(password string) (PasswordHashDetails, error) {
 	salt, err := generateRandomSalt()
 	if err != nil {
-		return passwordHashDetails{}, err
+		return PasswordHashDetails{}, err
 	}
 
 	passwordHash := argon2.IDKey(
@@ -57,13 +57,13 @@ func generatePasswordHash(password string) (passwordHashDetails, error) {
 		keyLen,
 	)
 
-	return passwordHashDetails{Hash: passwordHash, Salt: salt}, nil
+	return PasswordHashDetails{Hash: passwordHash, Salt: salt}, nil
 }
 
 // verifyPasswordHash verifies the provided plain text password to verify if the
 // provided plain text password generates a hash that will match the expected
 // hash.
-func verifyPasswordHash(plainPassword string, expectedHash []byte, salt []byte) bool {
+func VerifyPasswordHash(plainPassword string, expectedHash []byte, salt []byte) bool {
 	generatedHash := argon2.IDKey(
 		[]byte(plainPassword),
 		salt,

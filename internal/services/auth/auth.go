@@ -10,6 +10,8 @@ import (
 	"github.com/waduhek/flagger/internal/middleware"
 	"github.com/waduhek/flagger/internal/models"
 	"github.com/waduhek/flagger/proto/authpb"
+
+	"github.com/waduhek/flagger/internal/utils"
 )
 
 type AuthServer struct {
@@ -21,7 +23,7 @@ func (s *AuthServer) CreateNewUser(
 	ctx context.Context,
 	req *authpb.CreateNewUserRequest,
 ) (*authpb.CreateNewUserResponse, error) {
-	passwordHash, err := generatePasswordHash(req.Password)
+	passwordHash, err := utils.GeneratePasswordHash(req.Password)
 	if err != nil {
 		log.Printf("could not generate password hash: %v", err)
 		return nil, status.Error(codes.Internal, "could not generate a hash")
@@ -63,7 +65,11 @@ func (s *AuthServer) Login(
 		return nil, status.Error(codes.Internal, "could not get details of the username")
 	}
 
-	if !verifyPasswordHash(req.Password, user.Password.Hash, user.Password.Salt) {
+	if !utils.VerifyPasswordHash(
+		req.Password,
+		user.Password.Hash,
+		user.Password.Salt,
+	) {
 		log.Printf("incorrect credentials for user \"%s\"", req.Username)
 		return nil, status.Error(codes.Unauthenticated, "incorrect username or password")
 	}
@@ -97,7 +103,7 @@ func (s *AuthServer) ChangePassword(
 		return nil, status.Error(codes.Internal, "could not get details of the username")
 	}
 
-	if !verifyPasswordHash(
+	if !utils.VerifyPasswordHash(
 		req.CurrentPassword,
 		user.Password.Hash,
 		user.Password.Salt,
@@ -106,7 +112,7 @@ func (s *AuthServer) ChangePassword(
 		return nil, status.Error(codes.Unauthenticated, "incorrect current password")
 	}
 
-	newPasswordHash, err := generatePasswordHash(req.NewPassword)
+	newPasswordHash, err := utils.GeneratePasswordHash(req.NewPassword)
 	if err != nil {
 		log.Printf("error while hashing password: %v", err)
 		return nil, status.Error(codes.Internal, "could not hash new password")
