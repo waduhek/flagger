@@ -54,7 +54,7 @@ func (u *userRepository) UpdatePassword(
 	return u.coll.UpdateOne(ctx, filter, update)
 }
 
-func setupIndexes(ctx context.Context, coll *mongo.Collection) error {
+func setupUserCollIndexes(ctx context.Context, coll *mongo.Collection) error {
 	usernameIndexModel := mongo.IndexModel{
 		Keys:    bson.D{{Key: "username", Value: 1}},
 		Options: options.Index().SetUnique(true),
@@ -72,7 +72,7 @@ func NewUserRepository(
 ) (*userRepository, error) {
 	coll := db.Collection(userCollection)
 
-	err := setupIndexes(ctx, coll)
+	err := setupUserCollIndexes(ctx, coll)
 	if err != nil {
 		return nil, err
 	}

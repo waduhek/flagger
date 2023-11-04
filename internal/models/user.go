@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -15,10 +16,11 @@ type Password struct {
 
 // The details of the user.
 type User struct {
-	Name     string   `bson:"name" json:"name"`
-	Email    string   `bson:"email" json:"email"`
-	Username string   `bson:"username" json:"username"`
-	Password Password `bson:"inline" json:"password"`
+	ID       primitive.ObjectID `bson:"_id,omitempty"`
+	Name     string             `bson:"name" json:"name"`
+	Email    string             `bson:"email" json:"email"`
+	Username string             `bson:"username" json:"username"`
+	Password Password           `bson:"inline" json:"password"`
 }
 
 // UserRepository is an interface to the operations that can be performed on the
