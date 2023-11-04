@@ -18,10 +18,13 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/waduhek/flagger/proto/authpb"
+	"github.com/waduhek/flagger/proto/projectpb"
+
 	"github.com/waduhek/flagger/internal/interceptors"
 	"github.com/waduhek/flagger/internal/repo"
 	"github.com/waduhek/flagger/internal/services/auth"
-	"github.com/waduhek/flagger/proto/authpb"
+	"github.com/waduhek/flagger/internal/services/project"
 )
 
 var mongoConnectionString string = os.Getenv("FLAGGER_MONGO_URI")
@@ -43,6 +46,24 @@ func initAuthServer(db *mongo.Database) *auth.AuthServer {
 	authServer := auth.NewAuthServer(userRepo)
 
 	return authServer
+}
+
+func initProjectServer(db *mongo.Database) *project.ProjectServer {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	projectRepo, err := repo.NewProjectRepository(ctx, db)
+	if err != nil {
+		log.Panicf("could not initialise project repository: %v", err)
+	}
+
+	userRepo, err := repo.NewUserRepository(ctx, db)
+	if err != nil {
+		log.Panicf("could not initialise user repository: %v", err)
+	}
+
+	return project.NewProjectServer(projectRepo, userRepo)
 }
 
 func connectMongo() *mongo.Client {
@@ -99,12 +120,17 @@ func main() {
 
 	// Initialising all the servers
 	authServer := initAuthServer(db)
+	projectServer := initProjectServer(db)
 
 	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(interceptors.AuthServerUnaryInterceptor),
+		grpc.ChainUnaryInterceptor(
+			interceptors.AuthServerUnaryInterceptor,
+			interceptors.ProjectServerUnaryInterceptor,
+		),
 	)
 	// Registering servers
 	authpb.RegisterAuthServer(grpcServer, authServer)
+	projectpb.RegisterProjectServer(grpcServer, projectServer)
 
 	// GRPC reflection
 	reflection.Register(grpcServer)

@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "github.com/waduhek/flagger/proto/projectpb";
+
+package projectpb;
+
+service Project {
+  // CreateNewProject creates a new project for the currently authenticated
+  // user.
+  rpc CreateNewProject(CreateNewProjectRequest) returns (CreateNewProjectResponse);
+}
+
+// === CreateNewProject Messages ===
+
+// The request to create a new project.
+message CreateNewProjectRequest {
+  // The name of the project.
+  string project_name = 1;
+}
+
+// The response of creating a new project.
+message CreateNewProjectResponse {
+}
