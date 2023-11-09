@@ -4,14 +4,16 @@ import (
 	"context"
 	"log"
 
+	"go.mongodb.org/mongo-driver/mongo"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/waduhek/flagger/proto/authpb"
 
+	"github.com/waduhek/flagger/internal/hash"
 	"github.com/waduhek/flagger/internal/middleware"
 	"github.com/waduhek/flagger/internal/user"
-	"github.com/waduhek/flagger/internal/hash"
 )
 
 type AuthServer struct {
@@ -41,6 +43,10 @@ func (s *AuthServer) CreateNewUser(
 
 	newUserResult, err := s.userRepo.Save(ctx, &newUser)
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			log.Printf("a user with username %q already exists", req.Username)
+			return nil, status.Error(codes.AlreadyExists, "username is taken")
+		}
 		log.Printf("could not save user details: %v", err)
 		return nil, status.Error(codes.Internal, "could not save the user details")
 	}
