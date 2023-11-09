@@ -1,4 +1,4 @@
-package repo
+package project
 
 import (
 	"context"
@@ -8,8 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-
-	"github.com/waduhek/flagger/internal/models"
 )
 
 const projectCollection string = "projects"
@@ -20,7 +18,7 @@ type projectRepository struct {
 
 func (p *projectRepository) Save(
 	ctx context.Context,
-	project *models.Project,
+	project *Project,
 ) (*mongo.InsertOneResult, error) {
 	return p.coll.InsertOne(ctx, project)
 }
@@ -29,13 +27,13 @@ func (p *projectRepository) GetByNameAndUserID(
 	ctx context.Context,
 	projectName string,
 	userID primitive.ObjectID,
-) (*models.Project, error) {
+) (*Project, error) {
 	query := bson.D{
 		{Key: "created_by", Value: userID},
 		{Key: "name", Value: projectName},
 	}
 
-	var project models.Project
+	var project Project
 	err := p.coll.FindOne(ctx, query).Decode(&project)
 
 	return &project, err

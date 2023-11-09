@@ -7,33 +7,33 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/waduhek/flagger/internal/middleware"
-	"github.com/waduhek/flagger/internal/models"
 	"github.com/waduhek/flagger/proto/authpb"
 
-	"github.com/waduhek/flagger/internal/utils"
+	"github.com/waduhek/flagger/internal/middleware"
+	"github.com/waduhek/flagger/internal/user"
+	"github.com/waduhek/flagger/internal/hash"
 )
 
 type AuthServer struct {
 	authpb.UnimplementedAuthServer
-	userRepo models.UserRepository
+	userRepo user.UserRepository
 }
 
 func (s *AuthServer) CreateNewUser(
 	ctx context.Context,
 	req *authpb.CreateNewUserRequest,
 ) (*authpb.CreateNewUserResponse, error) {
-	passwordHash, err := utils.GeneratePasswordHash(req.Password)
+	passwordHash, err := hash.GeneratePasswordHash(req.Password)
 	if err != nil {
 		log.Printf("could not generate password hash: %v", err)
 		return nil, status.Error(codes.Internal, "could not generate a hash")
 	}
 
-	newUser := models.User{
+	newUser := user.User{
 		Username: req.Username,
 		Name:     req.Name,
 		Email:    req.Email,
-		Password: models.Password{
+		Password: user.Password{
 			Hash: passwordHash.Hash,
 			Salt: passwordHash.Salt,
 		},
@@ -65,7 +65,7 @@ func (s *AuthServer) Login(
 		return nil, status.Error(codes.Internal, "could not get details of the username")
 	}
 
-	if !utils.VerifyPasswordHash(
+	if !hash.VerifyPasswordHash(
 		req.Password,
 		user.Password.Hash,
 		user.Password.Salt,
@@ -97,28 +97,28 @@ func (s *AuthServer) ChangePassword(
 
 	username := claims.Subject
 
-	user, err := s.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
 		return nil, status.Error(codes.Internal, "could not get details of the username")
 	}
 
-	if !utils.VerifyPasswordHash(
+	if !hash.VerifyPasswordHash(
 		req.CurrentPassword,
-		user.Password.Hash,
-		user.Password.Salt,
+		fetchedUser.Password.Hash,
+		fetchedUser.Password.Salt,
 	) {
 		log.Printf("incorrect current password for resetting password")
 		return nil, status.Error(codes.Unauthenticated, "incorrect current password")
 	}
 
-	newPasswordHash, err := utils.GeneratePasswordHash(req.NewPassword)
+	newPasswordHash, err := hash.GeneratePasswordHash(req.NewPassword)
 	if err != nil {
 		log.Printf("error while hashing password: %v", err)
 		return nil, status.Error(codes.Internal, "could not hash new password")
 	}
 
-	password := models.Password{
+	password := user.Password{
 		Hash: newPasswordHash.Hash,
 		Salt: newPasswordHash.Salt,
 	}
@@ -134,7 +134,7 @@ func (s *AuthServer) ChangePassword(
 }
 
 // NewAuthServer creates a new server for the auth service.
-func NewAuthServer(userRepo models.UserRepository) *AuthServer {
+func NewAuthServer(userRepo user.UserRepository) *AuthServer {
 	server := &AuthServer{userRepo: userRepo}
 
 	return server

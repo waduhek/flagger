@@ -21,10 +21,10 @@ import (
 	"github.com/waduhek/flagger/proto/authpb"
 	"github.com/waduhek/flagger/proto/projectpb"
 
+	"github.com/waduhek/flagger/internal/auth"
 	"github.com/waduhek/flagger/internal/interceptors"
-	"github.com/waduhek/flagger/internal/repo"
-	"github.com/waduhek/flagger/internal/services/auth"
-	"github.com/waduhek/flagger/internal/services/project"
+	"github.com/waduhek/flagger/internal/project"
+	"github.com/waduhek/flagger/internal/user"
 )
 
 var mongoConnectionString string = os.Getenv("FLAGGER_MONGO_URI")
@@ -38,7 +38,7 @@ func initAuthServer(db *mongo.Database) *auth.AuthServer {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	userRepo, err := repo.NewUserRepository(ctx, db)
+	userRepo, err := user.NewUserRepository(ctx, db)
 	if err != nil {
 		log.Panicf("could not initialise user repository: %v", err)
 	}
@@ -53,12 +53,12 @@ func initProjectServer(db *mongo.Database) *project.ProjectServer {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	projectRepo, err := repo.NewProjectRepository(ctx, db)
+	projectRepo, err := project.NewProjectRepository(ctx, db)
 	if err != nil {
 		log.Panicf("could not initialise project repository: %v", err)
 	}
 
-	userRepo, err := repo.NewUserRepository(ctx, db)
+	userRepo, err := user.NewUserRepository(ctx, db)
 	if err != nil {
 		log.Panicf("could not initialise user repository: %v", err)
 	}

@@ -1,4 +1,4 @@
-package repo
+package user
 
 import (
 	"context"
@@ -6,8 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-
-	"github.com/waduhek/flagger/internal/models"
 )
 
 const userCollection string = "users"
@@ -18,7 +16,7 @@ type userRepository struct {
 
 func (u *userRepository) Save(
 	ctx context.Context,
-	user *models.User,
+	user *User,
 ) (*mongo.InsertOneResult, error) {
 	result, err := u.coll.InsertOne(ctx, user)
 
@@ -28,10 +26,10 @@ func (u *userRepository) Save(
 func (u *userRepository) GetByUsername(
 	ctx context.Context,
 	username string,
-) (*models.User, error) {
+) (*User, error) {
 	query := bson.D{{Key: "username", Value: username}}
 
-	var user models.User
+	var user User
 	err := u.coll.FindOne(ctx, query).Decode(&user)
 
 	return &user, err
@@ -40,7 +38,7 @@ func (u *userRepository) GetByUsername(
 func (u *userRepository) UpdatePassword(
 	ctx context.Context,
 	username string,
-	password *models.Password,
+	password *Password,
 ) (*mongo.UpdateResult, error) {
 	filter := bson.D{{Key: "username", Value: username}}
 	update := bson.D{{
