@@ -6,19 +6,20 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/waduhek/flagger/proto/projectpb"
 
 	"github.com/waduhek/flagger/internal/middleware"
-	"github.com/waduhek/flagger/internal/models"
+	"github.com/waduhek/flagger/internal/user"
 )
 
 type ProjectServer struct {
 	projectpb.UnimplementedProjectServer
-	projectRepo models.ProjectRepository
-	userRepo    models.UserRepository
+	projectRepo ProjectRepository
+	userRepo    user.UserRepository
 }
 
 func (p *ProjectServer) CreateNewProject(
@@ -40,7 +41,7 @@ func (p *ProjectServer) CreateNewProject(
 			status.Error(codes.Internal, "could not get details of the user")
 	}
 
-	newProject := models.Project{
+	newProject := Project{
 		Name:      req.ProjectName,
 		CreatedBy: user.ID,
 		CreatedAt: time.Now(),
@@ -69,8 +70,8 @@ func (p *ProjectServer) CreateNewProject(
 
 // NewProjectServer creates a new server for the project service.
 func NewProjectServer(
-	projectRepo models.ProjectRepository,
-	userRepo models.UserRepository,
+	projectRepo ProjectRepository,
+	userRepo user.UserRepository,
 ) *ProjectServer {
 	return &ProjectServer{projectRepo: projectRepo, userRepo: userRepo}
 }

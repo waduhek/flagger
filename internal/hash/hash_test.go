@@ -1,17 +1,16 @@
-package utils_test
+package hash_test
 
 import (
 	"testing"
 
-	"github.com/waduhek/flagger/internal/utils"
+	"github.com/waduhek/flagger/internal/hash"
 )
 
 func TestGeneratePasswordHash(t *testing.T) {
 	t.Run("some_passsword", func(subT *testing.T) {
-		// password := "super_s3cR3t"
 		password := "this_is anUnsualLY l0ng_and_stong p@a$$w0Rd!"
 
-		got, err := utils.GeneratePasswordHash(password)
+		got, err := hash.GeneratePasswordHash(password)
 		if err != nil {
 			subT.Errorf("error while hashing %q: %v", password, err)
 		}
@@ -33,7 +32,7 @@ func TestGeneratePasswordHash(t *testing.T) {
 	t.Run("empty_password", func(subT *testing.T) {
 		password := ""
 
-		got, err := utils.GeneratePasswordHash(password)
+		got, err := hash.GeneratePasswordHash(password)
 		if err != nil {
 			subT.Errorf("error while hashing %q: %v", password, err)
 		}
@@ -55,7 +54,7 @@ func TestGeneratePasswordHash(t *testing.T) {
 }
 
 func TestVerifyPasswordHash(t *testing.T) {
-	hash := []byte{
+	expectedHash := []byte{
 		208, 164, 67, 67, 145, 147, 230, 181, 67, 48, 137, 90, 66, 117, 1, 53,
 		246, 79, 122, 165, 148, 120, 25, 20, 178, 98, 132, 132, 75, 198, 151,
 		67, 242, 167, 255, 221, 87, 51, 208, 193, 26, 20, 162, 36, 77, 100, 86,
@@ -67,7 +66,7 @@ func TestVerifyPasswordHash(t *testing.T) {
 	}
 	plain := "super_s3cR3t"
 
-	ok := utils.VerifyPasswordHash(plain, hash, salt)
+	ok := hash.VerifyPasswordHash(plain, expectedHash, salt)
 	if !ok {
 		t.Error("password verification failed")
 	}
@@ -77,7 +76,7 @@ func BenchmarkGeneratePasswordHash(b *testing.B) {
 	password := "this_is anUnsualLY l0ng_and_stong p@a$$w0Rd!"
 
 	for i := 0; i < b.N; i++ {
-		_, err := utils.GeneratePasswordHash(password)
+		_, err := hash.GeneratePasswordHash(password)
 		if err != nil {
 			b.Errorf("hashing failed at i=%d", i)
 		}
@@ -85,7 +84,7 @@ func BenchmarkGeneratePasswordHash(b *testing.B) {
 }
 
 func BenchmarkVerifyPasswordHash(b *testing.B) {
-	hash := []byte{
+	expectedHash := []byte{
 		85, 149, 191, 225, 195, 168, 153, 215, 15, 201, 120, 235, 243, 188, 122,
 		51, 144, 241, 36, 237, 80, 73, 111, 41, 74, 167, 63, 92, 189, 255, 46,
 		122, 42, 116, 39, 91, 24, 114, 249, 100, 37, 150, 252, 113, 189, 174,
@@ -98,6 +97,6 @@ func BenchmarkVerifyPasswordHash(b *testing.B) {
 	plain := "this_is anUnsualLY l0ng_and_stong p@a$$w0Rd!"
 
 	for i := 0; i < b.N; i++ {
-		utils.VerifyPasswordHash(plain, hash, salt)
+		hash.VerifyPasswordHash(plain, expectedHash, salt)
 	}
 }
