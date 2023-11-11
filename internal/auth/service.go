@@ -12,7 +12,6 @@ import (
 	"github.com/waduhek/flagger/proto/authpb"
 
 	"github.com/waduhek/flagger/internal/hash"
-	"github.com/waduhek/flagger/internal/middleware"
 	"github.com/waduhek/flagger/internal/user"
 )
 
@@ -80,7 +79,7 @@ func (s *AuthServer) Login(
 		return nil, status.Error(codes.Unauthenticated, "incorrect username or password")
 	}
 
-	token, err := createNewJWT(user.Username)
+	token, err := CreateJWT(user.Username)
 	if err != nil {
 		log.Printf("error while generating jwt: %v", err)
 		return nil, status.Error(codes.Internal, err.Error())
@@ -95,7 +94,7 @@ func (s *AuthServer) ChangePassword(
 	ctx context.Context,
 	req *authpb.ChangePasswordRequest,
 ) (*authpb.ChangePasswordResponse, error) {
-	claims, ok := middleware.ClaimsFromContext(ctx)
+	claims, ok := ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find claims from token")
 		return nil, status.Error(codes.Internal, "could find token claims")

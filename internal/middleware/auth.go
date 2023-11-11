@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"log"
-	"os"
 	"regexp"
 	"strings"
 
@@ -11,10 +10,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	jwt "github.com/golang-jwt/jwt/v5"
+	"github.com/waduhek/flagger/internal/auth"
 )
-
-type jwtClaimsKey struct{}
 
 // AuthoriseJWT takes a GRPC context and validates that the current request has
 // the "authorization" header and is a valid JWT. If the token is present and
@@ -57,26 +54,15 @@ func AuthoriseJWT(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	claimCtx := context.WithValue(ctx, jwtClaimsKey{}, claims)
+	claimCtx := auth.InjectClaimsIntoContext(ctx, claims)
 
 	return claimCtx, nil
-}
-
-// ClaimsFromContext takes a GRPC context and tries to find the claims added by
-// the AuthoriseJWT middleware.
-func ClaimsFromContext(ctx context.Context) (*jwt.RegisteredClaims, bool) {
-	claims, ok := ctx.Value(jwtClaimsKey{}).(*jwt.RegisteredClaims)
-	if !ok {
-		return nil, false
-	}
-
-	return claims, true
 }
 
 // validateJWT accepts the token header value of the "authorization" header and
 // validates it. If the token is valid, returns the claims from the body of the
 // token. If an error occurs, will always return a GRPC compliant error.
-func validateJWT(token string) (*jwt.RegisteredClaims, error) {
+func validateJWT(token string) (*auth.FlaggerJWTClaims, error) {
 	bearerTokenRegEx := regexp.MustCompile(
 		`^[b|B]earer [a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+$`,
 	)
@@ -88,43 +74,5 @@ func validateJWT(token string) (*jwt.RegisteredClaims, error) {
 
 	headerJWT := strings.Split(token, " ")[1]
 
-	parsedToken, err := jwt.ParseWithClaims(
-		headerJWT,
-		&jwt.RegisteredClaims{},
-		func(jwtToken *jwt.Token) (interface{}, error) {
-			if _, ok := jwtToken.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil,
-					status.Error(codes.Unauthenticated, "invalid jwt")
-			}
-
-			jwtSecret, ok := os.LookupEnv("FLAGGER_JWT_SECRET")
-			if !ok {
-				log.Println("could not find jwt signing key in environment variables")
-				return nil,
-					status.Error(codes.Internal, "error while signing jwt")
-			}
-
-			return []byte(jwtSecret), nil
-		},
-	)
-	if err != nil {
-		log.Printf("error while parsing token: %v", err)
-		return nil,
-			status.Error(codes.Internal, "error while parsing token")
-	}
-
-	if !parsedToken.Valid {
-		log.Println("token is not valid")
-		return nil,
-			status.Error(codes.Unauthenticated, "invalid jwt")
-	}
-
-	claims, ok := parsedToken.Claims.(*jwt.RegisteredClaims)
-	if !ok {
-		log.Println("could not parse token claims as RegisteredClaims")
-		return nil,
-			status.Error(codes.Internal, "could not parse token claims")
-	}
-
-	return claims, nil
+	return auth.VerifyJWT(headerJWT)
 }

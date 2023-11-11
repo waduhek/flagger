@@ -12,7 +12,7 @@ import (
 
 	"github.com/waduhek/flagger/proto/projectpb"
 
-	"github.com/waduhek/flagger/internal/middleware"
+	"github.com/waduhek/flagger/internal/auth"
 	"github.com/waduhek/flagger/internal/user"
 )
 
@@ -26,7 +26,7 @@ func (p *ProjectServer) CreateNewProject(
 	ctx context.Context,
 	req *projectpb.CreateNewProjectRequest,
 ) (*projectpb.CreateNewProjectResponse, error) {
-	jwtClaims, ok := middleware.ClaimsFromContext(ctx)
+	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find claims from token")
 		return nil, status.Error(codes.Internal, "could not find token claims")
