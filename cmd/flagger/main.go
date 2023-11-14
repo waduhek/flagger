@@ -19,9 +19,11 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"github.com/waduhek/flagger/proto/authpb"
+	"github.com/waduhek/flagger/proto/environmentpb"
 	"github.com/waduhek/flagger/proto/projectpb"
 
 	"github.com/waduhek/flagger/internal/auth"
+	"github.com/waduhek/flagger/internal/environment"
 	"github.com/waduhek/flagger/internal/interceptors"
 	"github.com/waduhek/flagger/internal/project"
 	"github.com/waduhek/flagger/internal/user"
@@ -64,6 +66,33 @@ func initProjectServer(db *mongo.Database) *project.ProjectServer {
 	}
 
 	return project.NewProjectServer(projectRepo, userRepo)
+}
+
+func initEnvironmentServer(db *mongo.Database) *environment.EnvironmentServer {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	userRepo, err := user.NewUserRepository(ctx, db)
+	if err != nil {
+		log.Panicf("could not initialise user repository: %v", err)
+	}
+
+	projectRepo, err := project.NewProjectRepository(ctx, db)
+	if err != nil {
+		log.Panicf("could not initialise project repository: %v", err)
+	}
+
+	environmentRepo, err := environment.NewEnvironmentRepository(ctx, db)
+	if err != nil {
+		log.Panicf("could not initialise environment repository: %v", err)
+	}
+
+	return environment.NewEnvironmentServer(
+		userRepo,
+		projectRepo,
+		environmentRepo,
+	)
 }
 
 func connectMongo() *mongo.Client {
@@ -121,16 +150,21 @@ func main() {
 	// Initialising all the servers
 	authServer := initAuthServer(db)
 	projectServer := initProjectServer(db)
+	environmentServer := initEnvironmentServer(db)
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			interceptors.AuthServerUnaryInterceptor,
-			interceptors.ProjectServerUnaryInterceptor,
+			interceptors.AuthoriseRequestInterceptor("/projectpb.Project/"),
+			interceptors.AuthoriseRequestInterceptor(
+				"/environmentpb.Environment/",
+			),
 		),
 	)
 	// Registering servers
 	authpb.RegisterAuthServer(grpcServer, authServer)
 	projectpb.RegisterProjectServer(grpcServer, projectServer)
+	environmentpb.RegisterEnvironmentServer(grpcServer, environmentServer)
 
 	// GRPC reflection
 	reflection.Register(grpcServer)

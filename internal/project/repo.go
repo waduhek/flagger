@@ -41,13 +41,11 @@ func (p *projectRepository) GetByNameAndUserID(
 
 func (p *projectRepository) AddEnvironment(
 	ctx context.Context,
-	projectName string,
-	userID primitive.ObjectID,
+	projectID primitive.ObjectID,
 	environmentID primitive.ObjectID,
 ) (*mongo.UpdateResult, error) {
 	filterQuery := bson.D{
-		{Key: "created_by", Value: userID},
-		{Key: "name", Value: projectName},
+		{Key: "_id", Value: projectID},
 	}
 	updateQuery := bson.D{
 		{

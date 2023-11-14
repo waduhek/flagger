@@ -36,8 +36,7 @@ type ProjectRepository interface {
 	// ID.
 	AddEnvironment(
 		ctx context.Context,
-		projectName string,
-		userID primitive.ObjectID,
+		projectID primitive.ObjectID,
 		environmentID primitive.ObjectID,
 	) (*mongo.UpdateResult, error)
 
