@@ -3,7 +3,7 @@ module github.com/waduhek/flagger
 go 1.21.1
 
 require (
-	github.com/golang-jwt/jwt/v5 v5.0.0
+	github.com/golang-jwt/jwt/v5 v5.1.0
 	go.mongodb.org/mongo-driver v1.12.1
 	golang.org/x/crypto v0.15.0
 	google.golang.org/grpc v1.58.3
