@@ -1,6 +1,7 @@
 services:
   mongo:
-    image: mongo
+    build:
+      context: ./config/mongo
     container_name: flagger-mongo
     expose:
       - 27017
@@ -12,6 +13,11 @@ services:
       MONGO_INITDB_DATABASE: flagger
     volumes:
       - ./_docker/mongo:/data/db
+    healthcheck:
+      test: |
+        test $$(mongosh --quiet -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD} --eval "try { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'flagger-mongo' }] }).ok } catch (_) { rs.status().ok }") -eq 1
+      interval: 10s
+      start_period: 30s
 
   redis:
     image: redis
