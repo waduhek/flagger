@@ -63,14 +63,10 @@ func (p *projectRepository) AddEnvironment(
 
 func (p *projectRepository) AddFlag(
 	ctx context.Context,
-	projectName string,
-	userID string,
+	projectID primitive.ObjectID,
 	flagID primitive.ObjectID,
 ) (*mongo.UpdateResult, error) {
-	filterQuery := bson.D{
-		{Key: "created_by", Value: userID},
-		{Key: "name", Value: projectName},
-	}
+	filterQuery := bson.D{{Key: "_id", Value: projectID}}
 	updateQuery := bson.D{
 		{
 			Key:   "$push",
@@ -83,6 +79,31 @@ func (p *projectRepository) AddFlag(
 	}
 
 	return p.coll.UpdateOne(ctx, filterQuery, updateQuery)
+}
+
+func (p *projectRepository) AddFlagSettings(
+	ctx context.Context,
+	projectID primitive.ObjectID,
+	flagSettingIDs ...primitive.ObjectID,
+) (*mongo.UpdateResult, error) {
+	filter := bson.D{{Key: "_id", Value: projectID}}
+	update := bson.D{
+		{
+			Key: "$push",
+			Value: bson.D{
+				{
+					Key: "flag_settings",
+					Value: bson.D{{Key: "$each", Value: flagSettingIDs}},
+				},
+			},
+		},
+		{
+			Key:   "$set",
+			Value: bson.D{{Key: "updated_at", Value: time.Now()}},
+		},
+	}
+
+	return p.coll.UpdateOne(ctx, filter, update)
 }
 
 func setupProjectCollIndexes(

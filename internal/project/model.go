@@ -13,6 +13,7 @@ type Project struct {
 	Name         string               `bson:"name"`
 	Environments []primitive.ObjectID `bson:"environments,omitempty"`
 	Flags        []primitive.ObjectID `bson:"flags,omitempty"`
+	FlagSettings []primitive.ObjectID `bson:"flag_settings,omitempty"`
 	CreatedBy    primitive.ObjectID   `bson:"created_by"`
 	CreatedAt    time.Time            `bson:"created_at"`
 	UpdatedAt    time.Time            `bson:"updated_at"`
@@ -43,8 +44,14 @@ type ProjectRepository interface {
 	// Adds a new flag to the project by the project name.
 	AddFlag(
 		ctx context.Context,
-		projectName string,
-		userID string,
+		projectID primitive.ObjectID,
 		flagID primitive.ObjectID,
+	) (*mongo.UpdateResult, error)
+
+	// AddFlagSettings adds new flag settings to the project.
+	AddFlagSettings(
+		ctx context.Context,
+		projectID primitive.ObjectID,
+		flagSettingIDs ...primitive.ObjectID,
 	) (*mongo.UpdateResult, error)
 }

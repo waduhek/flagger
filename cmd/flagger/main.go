@@ -20,10 +20,13 @@ import (
 
 	"github.com/waduhek/flagger/proto/authpb"
 	"github.com/waduhek/flagger/proto/environmentpb"
+	"github.com/waduhek/flagger/proto/flagpb"
 	"github.com/waduhek/flagger/proto/projectpb"
 
 	"github.com/waduhek/flagger/internal/auth"
 	"github.com/waduhek/flagger/internal/environment"
+	"github.com/waduhek/flagger/internal/flag"
+	"github.com/waduhek/flagger/internal/flagsetting"
 	"github.com/waduhek/flagger/internal/interceptors"
 	"github.com/waduhek/flagger/internal/project"
 	"github.com/waduhek/flagger/internal/user"
@@ -95,6 +98,40 @@ func initEnvironmentServer(db *mongo.Database) *environment.EnvironmentServer {
 	)
 }
 
+func initFlagServer(client *mongo.Client, db *mongo.Database) *flag.FlagServer {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	userRepo, err := user.NewUserRepository(ctx, db)
+	if err != nil {
+		log.Panicf("could not initialise user repository: %v", err)
+	}
+
+	projectRepo, err := project.NewProjectRepository(ctx, db)
+	if err != nil {
+		log.Panicf("could not initialise project repository: %v", err)
+	}
+
+	flagRepo, err := flag.NewFlagRepository(ctx, db)
+	if err != nil {
+		log.Panicf("could not initialise flag repository: %v", err)
+	}
+
+	flagSettingRepo, err := flagsetting.NewFlagSettingRepository(ctx, db)
+	if err != nil {
+		log.Panicf("could not initialise flag setting repository: %v", err)
+	}
+
+	return flag.NewFlagServer(
+		client,
+		userRepo,
+		projectRepo,
+		flagRepo,
+		flagSettingRepo,
+	)
+}
+
 func connectMongo() *mongo.Client {
 	serverApi := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.
@@ -151,6 +188,7 @@ func main() {
 	authServer := initAuthServer(db)
 	projectServer := initProjectServer(db)
 	environmentServer := initEnvironmentServer(db)
+	flagServer := initFlagServer(mongoClient, db)
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
@@ -159,12 +197,14 @@ func main() {
 			interceptors.AuthoriseRequestInterceptor(
 				"/environmentpb.Environment/",
 			),
+			interceptors.AuthoriseRequestInterceptor("/flagpb.Flag/"),
 		),
 	)
 	// Registering servers
 	authpb.RegisterAuthServer(grpcServer, authServer)
 	projectpb.RegisterProjectServer(grpcServer, projectServer)
 	environmentpb.RegisterEnvironmentServer(grpcServer, environmentServer)
+	flagpb.RegisterFlagServer(grpcServer, flagServer)
 
 	// GRPC reflection
 	reflection.Register(grpcServer)

@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+option go_package = "github.com/waduhek/flagger/proto/flagpb";
+
+package flagpb;
+
+service Flag {
+  // CreateFlag creates a new flag under the project. The flag will be created
+  // in all environments and will be active by default.
+  rpc CreateFlag(CreateFlagRequest) returns (CreateFlagResponse);
+
+  // UpdateFlagStatus updates the status of the flag in the provided
+  // environment.
+  rpc UpdateFlagStatus(
+    UpdateFlagStatusRequest
+  ) returns (UpdateFlagStatusResponse);
+}
+
+// === CreateFlag messages ===
+
+// CreateFlagRequest is the request body for creating a new flag.
+message CreateFlagRequest {
+  // A unique name in the project for the flag.
+  string flag_name = 1;
+  // The name of the project under which the flag is to be created.
+  string project_name = 2;
+}
+
+// CreateFlagResponse is the response for creating a new flag.
+message CreateFlagResponse {
+}
+
+// === UpdateFlagStatus messages ===
+
+// UpdateFlagStatusRequest is the request body to update the status of a flag.
+message UpdateFlagStatusRequest {
+  // The name of the project where the flag is created.
+  string project_name = 1;
+  // The name of the environment in which the flag is to be updated.
+  string environment_name = 2;
+  // The name of the flag to be updated.
+  string flag_name = 3;
+  // The update to be made to the flag.
+  bool is_active = 4;
+}
+
+// UpdateFlagStatusResponse is the response for updating a flag.
+message UpdateFlagStatusResponse {
+}
