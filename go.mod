@@ -4,7 +4,7 @@ go 1.21.1
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.0
-	go.mongodb.org/mongo-driver v1.13.0
+	go.mongodb.org/mongo-driver v1.13.1
 	golang.org/x/crypto v0.16.0
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
