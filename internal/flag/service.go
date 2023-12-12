@@ -115,6 +115,7 @@ func (s *FlagServer) CreateFlag(
 	return &flagpb.CreateFlagResponse{}, nil
 }
 
+// handleCreateFlag performs the transaction for saving the flag in the DB.
 func (s *FlagServer) handleCreateFlag(
 	req *flagpb.CreateFlagRequest,
 	user *user.User,

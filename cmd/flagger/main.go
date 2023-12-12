@@ -71,7 +71,10 @@ func initProjectServer(db *mongo.Database) *project.ProjectServer {
 	return project.NewProjectServer(projectRepo, userRepo)
 }
 
-func initEnvironmentServer(db *mongo.Database) *environment.EnvironmentServer {
+func initEnvironmentServer(
+	client *mongo.Client,
+	db *mongo.Database,
+) *environment.EnvironmentServer {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -86,14 +89,21 @@ func initEnvironmentServer(db *mongo.Database) *environment.EnvironmentServer {
 		log.Panicf("could not initialise project repository: %v", err)
 	}
 
+	flagSettingRepo, err := flagsetting.NewFlagSettingRepository(ctx, db)
+	if err != nil {
+		log.Panicf("could not initialise flag setting repository: %v", err)
+	}
+
 	environmentRepo, err := environment.NewEnvironmentRepository(ctx, db)
 	if err != nil {
 		log.Panicf("could not initialise environment repository: %v", err)
 	}
 
 	return environment.NewEnvironmentServer(
+		client,
 		userRepo,
 		projectRepo,
+		flagSettingRepo,
 		environmentRepo,
 	)
 }
@@ -187,7 +197,7 @@ func main() {
 	// Initialising all the servers
 	authServer := initAuthServer(db)
 	projectServer := initProjectServer(db)
-	environmentServer := initEnvironmentServer(db)
+	environmentServer := initEnvironmentServer(mongoClient, db)
 	flagServer := initFlagServer(mongoClient, db)
 
 	grpcServer := grpc.NewServer(
