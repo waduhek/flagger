@@ -133,10 +133,16 @@ func initFlagServer(client *mongo.Client, db *mongo.Database) *flag.FlagServer {
 		log.Panicf("could not initialise flag setting repository: %v", err)
 	}
 
+	environmentRepo, err := environment.NewEnvironmentRepository(ctx, db)
+	if err != nil {
+		log.Panicf("could not initialise environment repository: %v", err)
+	}
+
 	return flag.NewFlagServer(
 		client,
 		userRepo,
 		projectRepo,
+		environmentRepo,
 		flagRepo,
 		flagSettingRepo,
 	)

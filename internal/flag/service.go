@@ -14,6 +14,7 @@ import (
 	"github.com/waduhek/flagger/proto/flagpb"
 
 	"github.com/waduhek/flagger/internal/auth"
+	"github.com/waduhek/flagger/internal/environment"
 	"github.com/waduhek/flagger/internal/flagsetting"
 	"github.com/waduhek/flagger/internal/project"
 	"github.com/waduhek/flagger/internal/user"
@@ -24,6 +25,7 @@ type FlagServer struct {
 	mongoClient     *mongo.Client
 	userRepo        user.UserRepository
 	projectRepo     project.ProjectRepository
+	environmentRepo environment.EnvironmentRepository
 	flagRepo        FlagRepository
 	flagSettingRepo flagsetting.FlagSettingRepository
 }
@@ -222,11 +224,122 @@ func (s *FlagServer) handleCreateFlag(
 	}
 }
 
+func (s *FlagServer) UpdateFlagStatus(
+	ctx context.Context,
+	req *flagpb.UpdateFlagStatusRequest,
+) (*flagpb.UpdateFlagStatusResponse, error) {
+	// Get the details of the currently authenticated user from the JWT.
+	jwtClaims, ok := auth.ClaimsFromContext(ctx)
+	if !ok {
+		log.Println("could not get token claims")
+		return nil, status.Error(codes.Internal, "could not get token claims")
+	}
+
+	username := jwtClaims.Subject
+
+	user, err := s.userRepo.GetByUsername(ctx, username)
+	if err != nil {
+		log.Printf("error while fetching user %q: %v", username, err)
+		return nil, status.Error(codes.Internal, "error while getting the user")
+	}
+
+	// Get the project that the has to be updated.
+	project, err := s.projectRepo.GetByNameAndUserID(
+		ctx,
+		req.ProjectName,
+		user.ID,
+	)
+	if err != nil {
+		log.Printf("error while fetching project %q: %v", req.ProjectName, err)
+
+		if err == mongo.ErrNoDocuments {
+			return nil, status.Error(codes.NotFound, "no projects found")
+		}
+
+		return nil, status.Error(
+			codes.Internal,
+			"error occurred while fetching project",
+		)
+	}
+
+	// Get the environment that is to be updated.
+	environment, err := s.environmentRepo.GetByNameAndProjectID(
+		ctx,
+		req.EnvironmentName,
+		project.ID,
+	)
+	if err != nil {
+		log.Printf(
+			"error while fetching environment %q: %v",
+			req.EnvironmentName,
+			err,
+		)
+
+		if err == mongo.ErrNoDocuments {
+			return nil, status.Error(codes.NotFound, "environment not found")
+		}
+
+		return nil, status.Error(
+			codes.Internal,
+			"error occurred while fetching environment",
+		)
+	}
+
+	// Get the flag to update.
+	flag, err := s.flagRepo.GetByNameAndProjectID(ctx, req.FlagName, project.ID)
+	if err != nil {
+		log.Printf("error while fetching flag %q: %v", req.FlagName, err)
+
+		if err == mongo.ErrNoDocuments {
+			return nil, status.Error(codes.NotFound, "flag not found")
+		}
+
+		return nil, status.Error(
+			codes.Internal,
+			"error occurred while fetching flag",
+		)
+	}
+
+	// Update the flag setting to the desired value.
+	updateResult, err := s.flagSettingRepo.UpdateIsActive(
+		ctx,
+		project.ID,
+		environment.ID,
+		flag.ID,
+		req.IsActive,
+	)
+	if err != nil {
+		log.Printf("error while updating flag setting: %v", err)
+
+		return nil, status.Error(
+			codes.Internal,
+			"error occurred while updating the flag setting",
+		)
+	}
+
+	if updateResult.ModifiedCount == 0 {
+		log.Printf(
+			"no flag settings were updated for project %q, environment %q, flag %q",
+			req.ProjectName,
+			req.EnvironmentName,
+			req.FlagName,
+		)
+
+		return nil, status.Error(
+			codes.Internal,
+			"no flag settings could be updated",
+		)
+	}
+
+	return &flagpb.UpdateFlagStatusResponse{}, nil
+}
+
 // NewFlagServer creates a new `FlagServer` for serving GRPC requests.
 func NewFlagServer(
 	mongoClient *mongo.Client,
 	userRepo user.UserRepository,
 	projectRepo project.ProjectRepository,
+	environmentRepo environment.EnvironmentRepository,
 	flagRepo FlagRepository,
 	flagSettingRepo flagsetting.FlagSettingRepository,
 ) *FlagServer {
@@ -234,6 +347,7 @@ func NewFlagServer(
 		mongoClient:     mongoClient,
 		userRepo:        userRepo,
 		projectRepo:     projectRepo,
+		environmentRepo: environmentRepo,
 		flagRepo:        flagRepo,
 		flagSettingRepo: flagSettingRepo,
 	}
