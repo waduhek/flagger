@@ -44,7 +44,9 @@ type FlagSettingRepository interface {
 	// value.
 	UpdateIsActive(
 		ctx context.Context,
-		flagSettingID primitive.ObjectID,
+		projectID primitive.ObjectID,
+		environmentID primitive.ObjectID,
+		flagID primitive.ObjectID,
 		isActive bool,
 	) (*mongo.UpdateResult, error)
 }

@@ -58,14 +58,22 @@ func (r *flagSettingRepository) Get(
 
 func (r *flagSettingRepository) UpdateIsActive(
 	ctx context.Context,
-	flagSettingID primitive.ObjectID,
+	projectID primitive.ObjectID,
+	environmentID primitive.ObjectID,
+	flagID primitive.ObjectID,
 	isActive bool,
 ) (*mongo.UpdateResult, error) {
+	filter := bson.D{
+		{Key: "project_id", Value: projectID},
+		{Key: "environment_id", Value: environmentID},
+		{Key: "flag_id", Value: flagID},
+	}
+
 	update := bson.D{{
 		Key: "$set", Value: bson.D{{Key: "is_active", Value: isActive}},
 	}}
 
-	return r.coll.UpdateByID(ctx, flagSettingID, update)
+	return r.coll.UpdateOne(ctx, filter, update)
 }
 
 func setupIndexes(ctx context.Context, coll *mongo.Collection) error {
