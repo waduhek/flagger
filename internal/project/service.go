@@ -29,7 +29,7 @@ func (p *ProjectServer) CreateNewProject(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find claims from token")
-		return nil, status.Error(codes.Internal, "could not find token claims")
+		return nil, auth.ENoTokenClaims
 	}
 
 	username := jwtClaims.Subject

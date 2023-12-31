@@ -35,7 +35,7 @@ func (s *EnvironmentServer) CreateEnvironment(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find jwt claims in request context")
-		return nil, status.Error(codes.Internal, "could not find token claims")
+		return nil, auth.ENoTokenClaims
 	}
 
 	username := jwtClaims.Subject

@@ -97,7 +97,7 @@ func (s *AuthServer) ChangePassword(
 	claims, ok := ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find claims from token")
-		return nil, status.Error(codes.Internal, "could find token claims")
+		return nil, ENoTokenClaims
 	}
 
 	username := claims.Subject

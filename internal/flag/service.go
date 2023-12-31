@@ -40,7 +40,7 @@ func (s *FlagServer) CreateFlag(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Println("could not get token claims")
-		return nil, status.Error(codes.Internal, "could not get token claims")
+		return nil, auth.ENoTokenClaims
 	}
 
 	username := jwtClaims.Subject
@@ -232,7 +232,7 @@ func (s *FlagServer) UpdateFlagStatus(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Println("could not get token claims")
-		return nil, status.Error(codes.Internal, "could not get token claims")
+		return nil, auth.ENoTokenClaims
 	}
 
 	username := jwtClaims.Subject
