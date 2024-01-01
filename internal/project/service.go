@@ -34,16 +34,15 @@ func (p *ProjectServer) CreateNewProject(
 
 	username := jwtClaims.Subject
 
-	user, err := p.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := p.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil,
-			status.Error(codes.Internal, "could not get details of the user")
+		return nil, user.ECouldNotFetchUser
 	}
 
 	newProject := Project{
 		Name:      req.ProjectName,
-		CreatedBy: user.ID,
+		CreatedBy: fetchedUser.ID,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

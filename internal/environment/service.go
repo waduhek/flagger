@@ -40,17 +40,17 @@ func (s *EnvironmentServer) CreateEnvironment(
 
 	username := jwtClaims.Subject
 
-	user, err := s.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, status.Error(codes.Internal, "error while fetching user")
+		return nil, user.ECouldNotFetchUser
 	}
 
 	// Check if the provided project exists with the user.
 	project, err := s.projectRepo.GetByNameAndUserID(
 		ctx,
 		req.ProjectName,
-		user.ID,
+		fetchedUser.ID,
 	)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -84,7 +84,7 @@ func (s *EnvironmentServer) CreateEnvironment(
 	// Start the transaction to save the environment.
 	_, txnErr := session.WithTransaction(
 		ctx,
-		s.handleCreateEnvrionment(req, user, project),
+		s.handleCreateEnvrionment(req, fetchedUser, project),
 	)
 	if txnErr != nil {
 		log.Printf(

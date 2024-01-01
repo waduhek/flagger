@@ -45,10 +45,10 @@ func (s *FlagServer) CreateFlag(
 
 	username := jwtClaims.Subject
 
-	user, err := s.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, status.Error(codes.Internal, "error while getting the user")
+		return nil, user.ECouldNotFetchUser
 	}
 
 	// Get the project that the flag is to be added to. If the project does not
@@ -57,7 +57,7 @@ func (s *FlagServer) CreateFlag(
 	project, err := s.projectRepo.GetByNameAndUserID(
 		ctx,
 		req.ProjectName,
-		user.ID,
+		fetchedUser.ID,
 	)
 	if err != nil {
 		log.Printf(
@@ -102,7 +102,7 @@ func (s *FlagServer) CreateFlag(
 
 	_, txnErr := txnSession.WithTransaction(
 		ctx,
-		s.handleCreateFlag(req, user, project),
+		s.handleCreateFlag(req, fetchedUser, project),
 	)
 	if txnErr != nil {
 		log.Printf("could not complete flag save transaction: %v", err)
@@ -237,17 +237,17 @@ func (s *FlagServer) UpdateFlagStatus(
 
 	username := jwtClaims.Subject
 
-	user, err := s.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, status.Error(codes.Internal, "error while getting the user")
+		return nil, user.ECouldNotFetchUser
 	}
 
 	// Get the project that the has to be updated.
 	project, err := s.projectRepo.GetByNameAndUserID(
 		ctx,
 		req.ProjectName,
-		user.ID,
+		fetchedUser.ID,
 	)
 	if err != nil {
 		log.Printf("error while fetching project %q: %v", req.ProjectName, err)
