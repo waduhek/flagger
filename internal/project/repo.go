@@ -92,7 +92,7 @@ func (p *projectRepository) AddFlagSettings(
 			Key: "$push",
 			Value: bson.D{
 				{
-					Key: "flag_settings",
+					Key:   "flag_settings",
 					Value: bson.D{{Key: "$each", Value: flagSettingIDs}},
 				},
 			},
