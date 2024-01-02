@@ -122,10 +122,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 					req.EnvironmentName,
 					fetchedProject.Name,
 				)
-				return nil, status.Error(
-					codes.AlreadyExists,
-					"an environment with that name already exists",
-				)
+				return nil, EEnvironmentNameTaken
 			}
 
 			log.Printf(
@@ -133,10 +130,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 				req.EnvironmentName,
 				fetchedProject.ID,
 			)
-			return nil, status.Error(
-				codes.Internal,
-				"could not create a new environment",
-			)
+			return nil, EEnvironmentSave
 		}
 
 		// Cast the returned ID of the inserted environment as an ObjectID.

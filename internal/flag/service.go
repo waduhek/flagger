@@ -251,7 +251,7 @@ func (s *FlagServer) UpdateFlagStatus(
 	}
 
 	// Get the environment that is to be updated.
-	environment, err := s.environmentRepo.GetByNameAndProjectID(
+	fetchedEnvironment, err := s.environmentRepo.GetByNameAndProjectID(
 		ctx,
 		req.EnvironmentName,
 		fetchedProject.ID,
@@ -264,13 +264,10 @@ func (s *FlagServer) UpdateFlagStatus(
 		)
 
 		if err == mongo.ErrNoDocuments {
-			return nil, status.Error(codes.NotFound, "environment not found")
+			return nil, environment.EEnvironmentNotFound
 		}
 
-		return nil, status.Error(
-			codes.Internal,
-			"error occurred while fetching environment",
-		)
+		return nil, environment.EEnvironmentFetch
 	}
 
 	// Get the flag to update.
@@ -296,7 +293,7 @@ func (s *FlagServer) UpdateFlagStatus(
 	updateResult, err := s.flagSettingRepo.UpdateIsActive(
 		ctx,
 		fetchedProject.ID,
-		environment.ID,
+		fetchedEnvironment.ID,
 		flag.ID,
 		req.IsActive,
 	)
