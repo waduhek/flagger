@@ -7,9 +7,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/waduhek/flagger/proto/projectpb"
 
 	"github.com/waduhek/flagger/internal/auth"
@@ -55,13 +52,11 @@ func (p *ProjectServer) CreateNewProject(
 				req.ProjectName,
 				username,
 			)
-			return nil,
-				status.Error(codes.AlreadyExists, "project already exists")
+			return nil, EProjectNameTaken
 		}
 
 		log.Printf("error while creating new project: %v", projectErr)
-		return nil,
-			status.Error(codes.Internal, "could not create a new project")
+		return nil, EProjectSave
 	}
 
 	return &projectpb.CreateNewProjectResponse{}, nil
