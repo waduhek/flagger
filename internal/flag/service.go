@@ -134,11 +134,10 @@ func (s *FlagServer) handleCreateFlag(
 			log.Printf("error while saving the flag: %v", err)
 
 			if mongo.IsDuplicateKeyError(err) {
-				return nil, status.Error(
-					codes.AlreadyExists,
-					"a flag with that name already exists",
-				)
+				return nil, EFlagNameTaken
 			}
+
+			return nil, EFlagSave
 		}
 
 		// Cast the returned ID of the saved flag as an ObjectID.
@@ -280,13 +279,10 @@ func (s *FlagServer) UpdateFlagStatus(
 		log.Printf("error while fetching flag %q: %v", req.FlagName, err)
 
 		if err == mongo.ErrNoDocuments {
-			return nil, status.Error(codes.NotFound, "flag not found")
+			return nil, EFlagNotFound
 		}
 
-		return nil, status.Error(
-			codes.Internal,
-			"error occurred while fetching flag",
-		)
+		return nil, EFlagFetch
 	}
 
 	// Update the flag setting to the desired value.
