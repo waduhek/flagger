@@ -27,7 +27,7 @@ func (s *AuthServer) CreateNewUser(
 	passwordHash, err := hash.GeneratePasswordHash(req.Password)
 	if err != nil {
 		log.Printf("could not generate password hash: %v", err)
-		return nil, status.Error(codes.Internal, "could not generate a hash")
+		return nil, hash.EHashGenPasswordHash
 	}
 
 	newUser := user.User{
@@ -121,7 +121,7 @@ func (s *AuthServer) ChangePassword(
 	newPasswordHash, err := hash.GeneratePasswordHash(req.NewPassword)
 	if err != nil {
 		log.Printf("error while hashing password: %v", err)
-		return nil, status.Error(codes.Internal, "could not hash new password")
+		return nil, hash.EHashGenPasswordHash
 	}
 
 	password := user.Password{
