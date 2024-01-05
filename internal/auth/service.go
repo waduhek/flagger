@@ -6,9 +6,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/waduhek/flagger/proto/authpb"
 
 	"github.com/waduhek/flagger/internal/hash"
@@ -77,13 +74,13 @@ func (s *AuthServer) Login(
 		fetchedUser.Password.Salt,
 	) {
 		log.Printf("incorrect credentials for user \"%s\"", req.Username)
-		return nil, status.Error(codes.Unauthenticated, "incorrect username or password")
+		return nil, EIncorrectUsernameOrPassword
 	}
 
 	token, err := CreateJWT(fetchedUser.Username)
 	if err != nil {
 		log.Printf("error while generating jwt: %v", err)
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
 	}
 
 	response := &authpb.LoginResponse{Token: token}
@@ -115,7 +112,7 @@ func (s *AuthServer) ChangePassword(
 		fetchedUser.Password.Salt,
 	) {
 		log.Printf("incorrect current password for resetting password")
-		return nil, status.Error(codes.Unauthenticated, "incorrect current password")
+		return nil, EIncorrectUsernameOrPassword
 	}
 
 	newPasswordHash, err := hash.GeneratePasswordHash(req.NewPassword)

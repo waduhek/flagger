@@ -2,13 +2,9 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"log"
 	"os"
 	"time"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 )
@@ -45,7 +41,7 @@ func CreateJWT(username string) (string, error) {
 	token, err := tokenGenerator.SignedString([]byte(jwtSecret))
 	if err != nil {
 		log.Printf("could not sign jwt: %v", err)
-		return "", errors.New("error while signing jwt")
+		return "", EJWTSign
 	}
 
 	return token, nil
@@ -60,7 +56,7 @@ func VerifyJWT(str string) (*FlaggerJWTClaims, error) {
 		&FlaggerJWTClaims{},
 		func(t *jwt.Token) (interface{}, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, status.Error(codes.Unauthenticated, "invalid jwt")
+				return nil, EInvalidJWT
 			}
 
 			return []byte(jwtSecret), nil
@@ -73,13 +69,13 @@ func VerifyJWT(str string) (*FlaggerJWTClaims, error) {
 
 	if !parsedToken.Valid {
 		log.Println("token is not valid")
-		return nil, status.Error(codes.Unauthenticated, "invalid jwt")
+		return nil, EInvalidJWT
 	}
 
 	claims, ok := parsedToken.Claims.(*FlaggerJWTClaims)
 	if !ok {
 		log.Println("could not parse token claims as RegisteredClaims")
-		return nil, status.Error(codes.Internal, "could not parse token claims")
+		return nil, ENoTokenClaims
 	}
 
 	return claims, nil
