@@ -167,10 +167,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 			)
 			if err != nil {
 				log.Printf("error while saving flag settings: %v", err)
-				return nil, status.Error(
-					codes.Internal,
-					"could not save flag settings",
-				)
+				return nil, flagsetting.EFlagSettingSave
 			}
 
 			// Cast the IDs of all the flag settings as ObjectIDs.
