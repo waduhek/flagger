@@ -1,4 +1,4 @@
-package interceptors
+package auth
 
 import (
 	"context"
@@ -7,8 +7,6 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/waduhek/flagger/proto/authpb"
-
-	"github.com/waduhek/flagger/internal/middleware"
 )
 
 // AuthServerUnaryInterceptor intercepts the requests coming to the
@@ -20,7 +18,7 @@ func AuthServerUnaryInterceptor(
 	handler grpc.UnaryHandler,
 ) (any, error) {
 	if info.FullMethod == authpb.Auth_ChangePassword_FullMethodName {
-		newCtx, err := middleware.AuthoriseJWT(ctx)
+		newCtx, err := AuthoriseJWT(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -44,7 +42,7 @@ func AuthoriseRequestInterceptor(serverPath string) grpc.UnaryServerInterceptor 
 			return handler(ctx, req)
 		}
 
-		newCtx, err := middleware.AuthoriseJWT(ctx)
+		newCtx, err := AuthoriseJWT(ctx)
 		if err != nil {
 			return nil, err
 		}

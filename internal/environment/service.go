@@ -8,9 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/waduhek/flagger/proto/environmentpb"
 
 	"github.com/waduhek/flagger/internal/auth"
@@ -35,22 +32,22 @@ func (s *EnvironmentServer) CreateEnvironment(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find jwt claims in request context")
-		return nil, status.Error(codes.Internal, "could not find token claims")
+		return nil, auth.ENoTokenClaims
 	}
 
 	username := jwtClaims.Subject
 
-	user, err := s.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, status.Error(codes.Internal, "error while fetching user")
+		return nil, user.ECouldNotFetchUser
 	}
 
 	// Check if the provided project exists with the user.
-	project, err := s.projectRepo.GetByNameAndUserID(
+	fetchedProject, err := s.projectRepo.GetByNameAndUserID(
 		ctx,
 		req.ProjectName,
-		user.ID,
+		fetchedUser.ID,
 	)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -59,15 +56,11 @@ func (s *EnvironmentServer) CreateEnvironment(
 				req.ProjectName,
 				username,
 			)
-			return nil,
-				status.Error(
-					codes.NotFound,
-					"no project was found with that name",
-				)
+			return nil, project.EProjectNotFound
 		}
 
 		log.Printf("error occurred while fetching projects: %v", err)
-		return nil, status.Error(codes.Internal, "could not fetch projects")
+		return nil, project.EProjectFetch
 	}
 
 	// Create a session that will initiate a transaction to save the details of
@@ -75,16 +68,13 @@ func (s *EnvironmentServer) CreateEnvironment(
 	session, err := s.mongoClient.StartSession()
 	if err != nil {
 		log.Printf("could not create a new session: %v", err)
-		return nil, status.Error(
-			codes.Internal,
-			"could not create a transaction session",
-		)
+		return nil, EEnvironmentTxn
 	}
 
 	// Start the transaction to save the environment.
 	_, txnErr := session.WithTransaction(
 		ctx,
-		s.handleCreateEnvrionment(req, user, project),
+		s.handleCreateEnvrionment(req, fetchedUser, fetchedProject),
 	)
 	if txnErr != nil {
 		log.Printf(
@@ -107,13 +97,13 @@ func (s *EnvironmentServer) CreateEnvironment(
 func (s *EnvironmentServer) handleCreateEnvrionment(
 	req *environmentpb.CreateEnvironmentRequest,
 	user *user.User,
-	project *project.Project,
+	fetchedProject *project.Project,
 ) func(mongo.SessionContext) (interface{}, error) {
 	return func(ctx mongo.SessionContext) (interface{}, error) {
 		// Create a new environment.
 		newEnvironment := Environment{
 			Name:      req.EnvironmentName,
-			ProjectID: project.ID,
+			ProjectID: fetchedProject.ID,
 			CreatedBy: user.ID,
 			CreatedAt: time.Now(),
 		}
@@ -124,42 +114,33 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 				log.Printf(
 					"an environment %q already exists for project %q",
 					req.EnvironmentName,
-					project.Name,
+					fetchedProject.Name,
 				)
-				return nil, status.Error(
-					codes.AlreadyExists,
-					"an environment with that name already exists",
-				)
+				return nil, EEnvironmentNameTaken
 			}
 
 			log.Printf(
 				"could not create environment %q for project %q",
 				req.EnvironmentName,
-				project.ID,
+				fetchedProject.ID,
 			)
-			return nil, status.Error(
-				codes.Internal,
-				"could not create a new environment",
-			)
+			return nil, EEnvironmentSave
 		}
 
 		// Cast the returned ID of the inserted environment as an ObjectID.
 		environmentID, ok := envResult.InsertedID.(primitive.ObjectID)
 		if !ok {
 			log.Printf("environment ID is not of type ObjectID")
-			return nil, status.Error(
-				codes.Internal,
-				"could not create a new environment",
-			)
+			return nil, EEnvironmentIDCast
 		}
 
 		// Create new flag settings for all the flags that are present in the
 		// current project.
 		var flagSettings []flagsetting.FlagSetting
-		for _, flagID := range project.Flags {
+		for _, flagID := range fetchedProject.Flags {
 			flagSetting := flagsetting.FlagSetting{
 				FlagID:        flagID,
-				ProjectID:     project.ID,
+				ProjectID:     fetchedProject.ID,
 				EnvironmentID: environmentID,
 				IsActive:      true,
 				CreatedAt:     time.Now(),
@@ -177,10 +158,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 			)
 			if err != nil {
 				log.Printf("error while saving flag settings: %v", err)
-				return nil, status.Error(
-					codes.Internal,
-					"could not save flag settings",
-				)
+				return nil, flagsetting.EFlagSettingSave
 			}
 
 			// Cast the IDs of all the flag settings as ObjectIDs.
@@ -195,7 +173,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 			// Update the project with the new flag settings.
 			_, projectFlagSettingErr := s.projectRepo.AddFlagSettings(
 				ctx,
-				project.ID,
+				fetchedProject.ID,
 				insertedFlagSettingIDs...,
 			)
 			if projectFlagSettingErr != nil {
@@ -203,30 +181,24 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 					"error while updating project with flag settings: %v",
 					projectFlagSettingErr,
 				)
-				return nil, status.Error(
-					codes.Internal,
-					"error while updating project with flag settings",
-				)
+				return nil, project.EProjectAddFlagSetting
 			}
 		}
 
 		// Add the environment to the project.
 		_, projectUpdateErr := s.projectRepo.AddEnvironment(
 			ctx,
-			project.ID,
+			fetchedProject.ID,
 			environmentID,
 		)
 		if projectUpdateErr != nil {
 			log.Printf(
 				"error while adding environment %q to project %q: %v",
 				environmentID,
-				project.ID,
+				fetchedProject.ID,
 				projectUpdateErr,
 			)
-			return nil, status.Error(
-				codes.Internal,
-				"could not create a new environment",
-			)
+			return nil, project.EProjectAddEnvironment
 		}
 
 		return nil, nil

@@ -27,7 +27,6 @@ import (
 	"github.com/waduhek/flagger/internal/environment"
 	"github.com/waduhek/flagger/internal/flag"
 	"github.com/waduhek/flagger/internal/flagsetting"
-	"github.com/waduhek/flagger/internal/interceptors"
 	"github.com/waduhek/flagger/internal/project"
 	"github.com/waduhek/flagger/internal/user"
 )
@@ -208,12 +207,12 @@ func main() {
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			interceptors.AuthServerUnaryInterceptor,
-			interceptors.AuthoriseRequestInterceptor("/projectpb.Project/"),
-			interceptors.AuthoriseRequestInterceptor(
+			auth.AuthServerUnaryInterceptor,
+			auth.AuthoriseRequestInterceptor("/projectpb.Project/"),
+			auth.AuthoriseRequestInterceptor(
 				"/environmentpb.Environment/",
 			),
-			interceptors.AuthoriseRequestInterceptor("/flagpb.Flag/"),
+			auth.AuthoriseRequestInterceptor("/flagpb.Flag/"),
 		),
 	)
 	// Registering servers

@@ -1,4 +1,4 @@
-package middleware
+package auth
 
 import (
 	"context"
@@ -6,11 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
-
-	"github.com/waduhek/flagger/internal/auth"
 )
 
 // AuthoriseJWT takes a GRPC context and validates that the current request has
@@ -21,19 +17,13 @@ func AuthoriseJWT(ctx context.Context) (context.Context, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		log.Printf("could not find incoming request metadata")
-		return nil, status.Error(
-			codes.InvalidArgument,
-			"could not find incoming request metadata",
-		)
+		return nil, EMetadataNotFound
 	}
 
 	authHeader, ok := md["authorization"]
 	if !ok {
 		log.Printf("could not find authorization header")
-		return nil, status.Error(
-			codes.Unauthenticated,
-			"authorization header not found",
-		)
+		return nil, EAuthMetadataNotFound
 	}
 
 	if len(authHeader) != 1 {
@@ -41,10 +31,7 @@ func AuthoriseJWT(ctx context.Context) (context.Context, error) {
 			"authorization header was found to be of len %d which is not expected",
 			len(authHeader),
 		)
-		return nil, status.Error(
-			codes.InvalidArgument,
-			"invalid authorization header value",
-		)
+		return nil, EAuthMetadataLength
 	}
 
 	bearerToken := authHeader[0]
@@ -54,7 +41,7 @@ func AuthoriseJWT(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	claimCtx := auth.InjectClaimsIntoContext(ctx, claims)
+	claimCtx := InjectClaimsIntoContext(ctx, claims)
 
 	return claimCtx, nil
 }
@@ -62,17 +49,16 @@ func AuthoriseJWT(ctx context.Context) (context.Context, error) {
 // validateJWT accepts the token header value of the "authorization" header and
 // validates it. If the token is valid, returns the claims from the body of the
 // token. If an error occurs, will always return a GRPC compliant error.
-func validateJWT(token string) (*auth.FlaggerJWTClaims, error) {
+func validateJWT(token string) (*FlaggerJWTClaims, error) {
 	bearerTokenRegEx := regexp.MustCompile(
 		`^[b|B]earer [a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+$`,
 	)
 	if !bearerTokenRegEx.MatchString(token) {
 		log.Println("token header format does not match")
-		return nil,
-			status.Error(codes.InvalidArgument, "invalid bearer header format")
+		return nil, EInvalidTokenFormat
 	}
 
 	headerJWT := strings.Split(token, " ")[1]
 
-	return auth.VerifyJWT(headerJWT)
+	return VerifyJWT(headerJWT)
 }

@@ -7,9 +7,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/waduhek/flagger/proto/projectpb"
 
 	"github.com/waduhek/flagger/internal/auth"
@@ -29,21 +26,20 @@ func (p *ProjectServer) CreateNewProject(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find claims from token")
-		return nil, status.Error(codes.Internal, "could not find token claims")
+		return nil, auth.ENoTokenClaims
 	}
 
 	username := jwtClaims.Subject
 
-	user, err := p.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := p.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil,
-			status.Error(codes.Internal, "could not get details of the user")
+		return nil, user.ECouldNotFetchUser
 	}
 
 	newProject := Project{
 		Name:      req.ProjectName,
-		CreatedBy: user.ID,
+		CreatedBy: fetchedUser.ID,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -56,13 +52,11 @@ func (p *ProjectServer) CreateNewProject(
 				req.ProjectName,
 				username,
 			)
-			return nil,
-				status.Error(codes.AlreadyExists, "project already exists")
+			return nil, EProjectNameTaken
 		}
 
 		log.Printf("error while creating new project: %v", projectErr)
-		return nil,
-			status.Error(codes.Internal, "could not create a new project")
+		return nil, EProjectSave
 	}
 
 	return &projectpb.CreateNewProjectResponse{}, nil
