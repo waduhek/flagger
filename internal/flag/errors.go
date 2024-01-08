@@ -29,3 +29,24 @@ var EFlagFetch = status.Error(
 	codes.Internal,
 	"error occurred while fetching flag",
 )
+
+// ENoEnvironments is a GRPC error that is returned when no environments have
+// been configured and the user tries to create a new flag.
+var ENoEnvironments = status.Error(
+	codes.FailedPrecondition,
+	"no environments have been configured for the project",
+)
+
+// EFlagSaveTxn is a GRPC error that is returned when a new session for starting
+// a transaction could not be created.
+var EFlagSaveTxn = status.Error(
+	codes.Internal,
+	"could start the transaction to save flag",
+)
+
+// EUpdateFlagStatus is a GRPC error that is returned when the status of a flag
+// could not be updated.
+var EUpdateFlagStatus = status.Error(
+	codes.Internal,
+	"no flag settings could be updated",
+)

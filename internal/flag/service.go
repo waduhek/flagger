@@ -8,9 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/waduhek/flagger/proto/flagpb"
 
 	"github.com/waduhek/flagger/internal/auth"
@@ -81,20 +78,14 @@ func (s *FlagServer) CreateFlag(
 			"no environments are configured for the project %q cannot create flag",
 			req.ProjectName,
 		)
-		return nil, status.Error(
-			codes.FailedPrecondition,
-			"no environments have been configured for the project",
-		)
+		return nil, ENoEnvironments
 	}
 
 	// Start a transaction to save the flag.
 	txnSession, err := s.mongoClient.StartSession()
 	if err != nil {
 		log.Printf("could not start transaction to save flag: %v", err)
-		return nil, status.Error(
-			codes.Internal,
-			"could start the transaction to save flag",
-		)
+		return nil, EFlagSaveTxn
 	}
 
 	_, txnErr := txnSession.WithTransaction(
@@ -306,10 +297,7 @@ func (s *FlagServer) UpdateFlagStatus(
 			req.FlagName,
 		)
 
-		return nil, status.Error(
-			codes.Internal,
-			"no flag settings could be updated",
-		)
+		return nil, EUpdateFlagStatus
 	}
 
 	return &flagpb.UpdateFlagStatusResponse{}, nil
