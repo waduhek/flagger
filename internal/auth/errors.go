@@ -26,3 +26,31 @@ var EJWTSign = status.Error(codes.Internal, "error while signing JWT")
 // EInvalidJWT is a GRPC error that is returned when the provided JWT doesn't
 // complete validation.
 var EInvalidJWT = status.Error(codes.Unauthenticated, "invalid jwt")
+
+// EMetadataNotFound is a GRPC error that is returned when the request metadata
+// could not be found.
+var EMetadataNotFound = status.Error(
+	codes.InvalidArgument,
+	"could not find incoming request metadata",
+)
+
+// EAuthMetadataNotFound is a GRPC error that is returned when "authorization"
+// metadata was not found.
+var EAuthMetadataNotFound = status.Error(
+	codes.Unauthenticated,
+	"authorization metdata not found",
+)
+
+// EAuthMetadataLength is a GRPC error that is returned when the length of
+// "authorization" metadata is of incorrect length.
+var EAuthMetadataLength = status.Error(
+	codes.InvalidArgument,
+	"invalid authorization metadata value",
+)
+
+// EInvalidTokenFormat is a GRPC error that is returned when the format of the
+// provided token does match the expected format.
+var EInvalidTokenFormat = status.Error(
+	codes.InvalidArgument,
+	"invalid bearer header format",
+)
