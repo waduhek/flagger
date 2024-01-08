@@ -1,4 +1,4 @@
-package middleware
+package auth
 
 import (
 	"context"
@@ -9,8 +9,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-
-	"github.com/waduhek/flagger/internal/auth"
 )
 
 // AuthoriseJWT takes a GRPC context and validates that the current request has
@@ -54,7 +52,7 @@ func AuthoriseJWT(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	claimCtx := auth.InjectClaimsIntoContext(ctx, claims)
+	claimCtx := InjectClaimsIntoContext(ctx, claims)
 
 	return claimCtx, nil
 }
@@ -62,7 +60,7 @@ func AuthoriseJWT(ctx context.Context) (context.Context, error) {
 // validateJWT accepts the token header value of the "authorization" header and
 // validates it. If the token is valid, returns the claims from the body of the
 // token. If an error occurs, will always return a GRPC compliant error.
-func validateJWT(token string) (*auth.FlaggerJWTClaims, error) {
+func validateJWT(token string) (*FlaggerJWTClaims, error) {
 	bearerTokenRegEx := regexp.MustCompile(
 		`^[b|B]earer [a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+\.[a-zA-Z0-9-_]+$`,
 	)
@@ -74,5 +72,5 @@ func validateJWT(token string) (*auth.FlaggerJWTClaims, error) {
 
 	headerJWT := strings.Split(token, " ")[1]
 
-	return auth.VerifyJWT(headerJWT)
+	return VerifyJWT(headerJWT)
 }
