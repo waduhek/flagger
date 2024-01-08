@@ -8,9 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/waduhek/flagger/proto/environmentpb"
 
 	"github.com/waduhek/flagger/internal/auth"
@@ -71,10 +68,7 @@ func (s *EnvironmentServer) CreateEnvironment(
 	session, err := s.mongoClient.StartSession()
 	if err != nil {
 		log.Printf("could not create a new session: %v", err)
-		return nil, status.Error(
-			codes.Internal,
-			"could not create a transaction session",
-		)
+		return nil, EEnvironmentTxn
 	}
 
 	// Start the transaction to save the environment.
@@ -137,10 +131,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 		environmentID, ok := envResult.InsertedID.(primitive.ObjectID)
 		if !ok {
 			log.Printf("environment ID is not of type ObjectID")
-			return nil, status.Error(
-				codes.Internal,
-				"could not create a new environment",
-			)
+			return nil, EEnvironmentIDCast
 		}
 
 		// Create new flag settings for all the flags that are present in the

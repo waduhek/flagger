@@ -29,3 +29,17 @@ var EEnvironmentFetch = status.Error(
 	codes.Internal,
 	"error occurred while fetching environment",
 )
+
+// EEnvironmentTxn is a GRPC error that is returned when a new session for
+// starting a transaction could not be created.
+var EEnvironmentTxn = status.Error(
+	codes.Internal,
+	"could not create a transaction session",
+)
+
+// EEnvironmentIDCast is a GRPC error that is returned when the ID of the
+// environment could not be cast.
+var EEnvironmentIDCast = status.Error(
+	codes.Internal,
+	"could not create a new environment",
+)
