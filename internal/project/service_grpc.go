@@ -82,6 +82,49 @@ func (p *ProjectServer) CreateNewProject(
 	return &projectpb.CreateNewProjectResponse{}, nil
 }
 
+func (p *ProjectServer) GetProjectKey(
+	ctx context.Context,
+	req *projectpb.GetProjectKeyRequest,
+) (*projectpb.GetProjectKeyResponse, error) {
+	jwtClaims, ok := auth.ClaimsFromContext(ctx)
+	if !ok {
+		log.Printf("could not find claims from token")
+		return nil, auth.ENoTokenClaims
+	}
+
+	username := jwtClaims.Subject
+
+	fetchedUser, err := p.userRepo.GetByUsername(ctx, username)
+	if err != nil {
+		log.Printf("error while fetching user %q: %v", username, err)
+		return nil, user.ECouldNotFetchUser
+	}
+
+	project, err := p.projectRepo.GetByNameAndUserID(
+		ctx,
+		req.ProjectName,
+		fetchedUser.ID,
+	)
+	if err != nil {
+		log.Printf(
+			"error while fetching project %q with user %q: %v",
+			req.ProjectName,
+			username,
+			err,
+		)
+
+		if err == mongo.ErrNoDocuments {
+			return nil, EProjectNotFound
+		}
+
+		return nil, EProjectFetch
+	}
+
+	response := projectpb.GetProjectKeyResponse{ProjectKey: project.Key}
+
+	return &response, nil
+}
+
 // NewProjectServer creates a new server for the project service.
 func NewProjectServer(
 	projectRepo ProjectRepository,

@@ -8,6 +8,9 @@ service Project {
   // CreateNewProject creates a new project for the currently authenticated
   // user.
   rpc CreateNewProject(CreateNewProjectRequest) returns (CreateNewProjectResponse);
+
+  // GetProjectKey returns the project key of the requested project.
+  rpc GetProjectKey(GetProjectKeyRequest) returns (GetProjectKeyResponse);
 }
 
 // === CreateNewProject Messages ===
@@ -20,4 +23,18 @@ message CreateNewProjectRequest {
 
 // The response of creating a new project.
 message CreateNewProjectResponse {
+}
+
+// === GetProjectKey Messages ===
+
+// The request to get the project key.
+message GetProjectKeyRequest {
+  // The name of the project.
+  string project_name = 1;
+}
+
+// The response of requesting the project key.
+message GetProjectKeyResponse {
+  // The key for the project.
+  string project_key = 1;
 }
