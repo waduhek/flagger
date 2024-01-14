@@ -10,6 +10,7 @@ import (
 
 type Project struct {
 	ID           primitive.ObjectID   `bson:"_id,omitempty"`
+	Key          string               `bson:"key"`
 	Name         string               `bson:"name"`
 	Environments []primitive.ObjectID `bson:"environments,omitempty"`
 	Flags        []primitive.ObjectID `bson:"flags,omitempty"`

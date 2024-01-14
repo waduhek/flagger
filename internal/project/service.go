@@ -1,71 +1,17 @@
 package project
 
-import (
-	"context"
-	"log"
-	"time"
+import "math/rand"
 
-	"go.mongodb.org/mongo-driver/mongo"
+const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const lettersLen = len(letters)
 
-	"github.com/waduhek/flagger/proto/projectpb"
+// generateProjectKey generates a new project key with a length specified by n.
+func generateProjectKey(n uint) string {
+	b := make([]byte, n)
 
-	"github.com/waduhek/flagger/internal/auth"
-	"github.com/waduhek/flagger/internal/user"
-)
-
-type ProjectServer struct {
-	projectpb.UnimplementedProjectServer
-	projectRepo ProjectRepository
-	userRepo    user.UserRepository
-}
-
-func (p *ProjectServer) CreateNewProject(
-	ctx context.Context,
-	req *projectpb.CreateNewProjectRequest,
-) (*projectpb.CreateNewProjectResponse, error) {
-	jwtClaims, ok := auth.ClaimsFromContext(ctx)
-	if !ok {
-		log.Printf("could not find claims from token")
-		return nil, auth.ENoTokenClaims
+	for i := range b {
+		b[i] = letters[rand.Intn(lettersLen)]
 	}
 
-	username := jwtClaims.Subject
-
-	fetchedUser, err := p.userRepo.GetByUsername(ctx, username)
-	if err != nil {
-		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ECouldNotFetchUser
-	}
-
-	newProject := Project{
-		Name:      req.ProjectName,
-		CreatedBy: fetchedUser.ID,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	_, projectErr := p.projectRepo.Save(ctx, &newProject)
-	if projectErr != nil {
-		if mongo.IsDuplicateKeyError(projectErr) {
-			log.Printf(
-				"a project with name %q exists for user %q",
-				req.ProjectName,
-				username,
-			)
-			return nil, EProjectNameTaken
-		}
-
-		log.Printf("error while creating new project: %v", projectErr)
-		return nil, EProjectSave
-	}
-
-	return &projectpb.CreateNewProjectResponse{}, nil
-}
-
-// NewProjectServer creates a new server for the project service.
-func NewProjectServer(
-	projectRepo ProjectRepository,
-	userRepo user.UserRepository,
-) *ProjectServer {
-	return &ProjectServer{projectRepo: projectRepo, userRepo: userRepo}
+	return string(b)
 }

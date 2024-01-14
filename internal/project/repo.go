@@ -117,7 +117,20 @@ func setupProjectCollIndexes(
 		},
 		Options: options.Index().SetUnique(true),
 	}
-	_, err := coll.Indexes().CreateOne(ctx, projectUserIndexModel)
+	projectKeyIndexModel := mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "key", Value: 1},
+		},
+		Options: options.Index().SetUnique(true),
+	}
+
+	_, err := coll.Indexes().CreateMany(
+		ctx,
+		[]mongo.IndexModel{
+			projectUserIndexModel,
+			projectKeyIndexModel,
+		},
+	)
 
 	return err
 }
