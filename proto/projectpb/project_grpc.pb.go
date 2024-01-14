@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	Project_CreateNewProject_FullMethodName = "/projectpb.Project/CreateNewProject"
+	Project_GetProjectKey_FullMethodName    = "/projectpb.Project/GetProjectKey"
 )
 
 // ProjectClient is the client API for Project service.
@@ -29,6 +30,8 @@ type ProjectClient interface {
 	// CreateNewProject creates a new project for the currently authenticated
 	// user.
 	CreateNewProject(ctx context.Context, in *CreateNewProjectRequest, opts ...grpc.CallOption) (*CreateNewProjectResponse, error)
+	// GetProjectKey returns the project key of the requested project.
+	GetProjectKey(ctx context.Context, in *GetProjectKeyRequest, opts ...grpc.CallOption) (*GetProjectKeyResponse, error)
 }
 
 type projectClient struct {
@@ -48,6 +51,15 @@ func (c *projectClient) CreateNewProject(ctx context.Context, in *CreateNewProje
 	return out, nil
 }
 
+func (c *projectClient) GetProjectKey(ctx context.Context, in *GetProjectKeyRequest, opts ...grpc.CallOption) (*GetProjectKeyResponse, error) {
+	out := new(GetProjectKeyResponse)
+	err := c.cc.Invoke(ctx, Project_GetProjectKey_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProjectServer is the server API for Project service.
 // All implementations must embed UnimplementedProjectServer
 // for forward compatibility
@@ -55,6 +67,8 @@ type ProjectServer interface {
 	// CreateNewProject creates a new project for the currently authenticated
 	// user.
 	CreateNewProject(context.Context, *CreateNewProjectRequest) (*CreateNewProjectResponse, error)
+	// GetProjectKey returns the project key of the requested project.
+	GetProjectKey(context.Context, *GetProjectKeyRequest) (*GetProjectKeyResponse, error)
 	mustEmbedUnimplementedProjectServer()
 }
 
@@ -64,6 +78,9 @@ type UnimplementedProjectServer struct {
 
 func (UnimplementedProjectServer) CreateNewProject(context.Context, *CreateNewProjectRequest) (*CreateNewProjectResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateNewProject not implemented")
+}
+func (UnimplementedProjectServer) GetProjectKey(context.Context, *GetProjectKeyRequest) (*GetProjectKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetProjectKey not implemented")
 }
 func (UnimplementedProjectServer) mustEmbedUnimplementedProjectServer() {}
 
@@ -96,6 +113,24 @@ func _Project_CreateNewProject_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Project_GetProjectKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProjectKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectServer).GetProjectKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Project_GetProjectKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectServer).GetProjectKey(ctx, req.(*GetProjectKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Project_ServiceDesc is the grpc.ServiceDesc for Project service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -106,6 +141,10 @@ var Project_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateNewProject",
 			Handler:    _Project_CreateNewProject_Handler,
+		},
+		{
+			MethodName: "GetProjectKey",
+			Handler:    _Project_GetProjectKey_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
