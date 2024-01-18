@@ -22,12 +22,14 @@ import (
 	"github.com/waduhek/flagger/proto/environmentpb"
 	"github.com/waduhek/flagger/proto/flagpb"
 	"github.com/waduhek/flagger/proto/projectpb"
+	"github.com/waduhek/flagger/proto/providerpb"
 
 	"github.com/waduhek/flagger/internal/auth"
 	"github.com/waduhek/flagger/internal/environment"
 	"github.com/waduhek/flagger/internal/flag"
 	"github.com/waduhek/flagger/internal/flagsetting"
 	"github.com/waduhek/flagger/internal/project"
+	"github.com/waduhek/flagger/internal/provider"
 	"github.com/waduhek/flagger/internal/user"
 )
 
@@ -147,6 +149,10 @@ func initFlagServer(client *mongo.Client, db *mongo.Database) *flag.FlagServer {
 	)
 }
 
+func initFlagProviderServer() *provider.FlagProviderServer {
+	return provider.NewFlagProviderServer()
+}
+
 func connectMongo() *mongo.Client {
 	serverApi := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.
@@ -204,6 +210,7 @@ func main() {
 	projectServer := initProjectServer(db)
 	environmentServer := initEnvironmentServer(mongoClient, db)
 	flagServer := initFlagServer(mongoClient, db)
+	flagProviderServer := initFlagProviderServer()
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
@@ -213,6 +220,7 @@ func main() {
 				"/environmentpb.Environment/",
 			),
 			auth.AuthoriseRequestInterceptor("/flagpb.Flag/"),
+			project.ProjectTokenUnaryInterceptor("/providerpb.FlagProvider/"),
 		),
 	)
 	// Registering servers
@@ -220,6 +228,7 @@ func main() {
 	projectpb.RegisterProjectServer(grpcServer, projectServer)
 	environmentpb.RegisterEnvironmentServer(grpcServer, environmentServer)
 	flagpb.RegisterFlagServer(grpcServer, flagServer)
+	providerpb.RegisterFlagProviderServer(grpcServer, flagProviderServer)
 
 	// GRPC reflection
 	reflection.Register(grpcServer)

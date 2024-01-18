@@ -53,3 +53,25 @@ var EProjectAddFlagSetting = status.Error(
 	codes.Internal,
 	"error while updating project with flag settings",
 )
+
+// EMetadataNotFound is a GRPC error that is returned when trying to
+// authenticate a request using the project key and the required request
+// metadata was not found.
+var EMetadataNotFound = status.Error(
+	codes.Internal,
+	"request metadata was not found",
+)
+
+// EProjectTokenNotFound is a GRPC error that is returned when the project token
+// was not found in the request metadata.
+var EProjectTokenNotFound = status.Error(
+	codes.Unauthenticated,
+	"project token not found in request metadata",
+)
+
+// ETokenMetadataLength is a GRPC error that is returned when the length of the
+// project token metadata does not match the expected length i.e. 1.
+var ETokenMetadataLength = status.Error(
+	codes.InvalidArgument,
+	"invalid length of project token metadata",
+)
