@@ -25,15 +25,15 @@ func AuthoriseProject(ctx context.Context) (context.Context, error) {
 	projectTokens, ok := md[projectTokenMetadataKey]
 	if !ok {
 		log.Println("could not find the project token")
-		return nil, EProjectTokenNotFound
+		return nil, EProjectKeyNotFound
 	}
 
 	if len(projectTokens) != 1 {
 		log.Println("multiple project tokens found in metadata")
-		return nil, ETokenMetadataLength
+		return nil, EKeyMetadataLength
 	}
 
 	projectToken := projectTokens[0]
 
-	return injectProjectTokenIntoContext(ctx, projectToken), nil
+	return injectProjectKeyIntoContext(ctx, projectToken), nil
 }

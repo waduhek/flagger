@@ -220,7 +220,7 @@ func main() {
 				"/environmentpb.Environment/",
 			),
 			auth.AuthoriseRequestInterceptor("/flagpb.Flag/"),
-			project.ProjectTokenUnaryInterceptor("/providerpb.FlagProvider/"),
+			project.ProjectKeyUnaryInterceptor("/providerpb.FlagProvider/"),
 		),
 	)
 	// Registering servers

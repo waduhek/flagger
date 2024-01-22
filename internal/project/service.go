@@ -8,7 +8,8 @@ import (
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const lettersLen = len(letters)
 
-type projectTokenKey struct{}
+// projectKey is the key for storing the project key in the request context.
+type projectKey struct{}
 
 // generateProjectKey generates a new project key with a length specified by n.
 func generateProjectKey(n uint) string {
@@ -21,19 +22,19 @@ func generateProjectKey(n uint) string {
 	return string(b)
 }
 
-// injectProjectTokenIntoContext creates a new context with the project token
-// in the value.
-func injectProjectTokenIntoContext(
+// injectProjectKeyIntoContext creates a new context with the project key in the
+// value.
+func injectProjectKeyIntoContext(
 	ctx context.Context,
 	token string,
 ) context.Context {
-	return context.WithValue(ctx, projectTokenKey{}, token)
+	return context.WithValue(ctx, projectKey{}, token)
 }
 
-// ProjectTokenFromContext returns the project token from the provided context
-// if it is available.
-func ProjectTokenFromContext(ctx context.Context) (string, bool) {
-	token, ok := ctx.Value(projectTokenKey{}).(string)
+// ProjectKeyFromContext returns the project key from the provided context if it
+// is available.
+func ProjectKeyFromContext(ctx context.Context) (string, bool) {
+	token, ok := ctx.Value(projectKey{}).(string)
 	if !ok {
 		return "", false
 	}
