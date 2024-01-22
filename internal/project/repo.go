@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const projectCollection string = "projects"
+const ProjectCollection string = "projects"
 
 type projectRepository struct {
 	coll *mongo.Collection
@@ -139,7 +139,7 @@ func NewProjectRepository(
 	ctx context.Context,
 	db *mongo.Database,
 ) (*projectRepository, error) {
-	coll := db.Collection(projectCollection)
+	coll := db.Collection(ProjectCollection)
 
 	err := setupProjectCollIndexes(ctx, coll)
 	if err != nil {

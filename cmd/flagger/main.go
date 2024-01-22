@@ -149,8 +149,10 @@ func initFlagServer(client *mongo.Client, db *mongo.Database) *flag.FlagServer {
 	)
 }
 
-func initFlagProviderServer() *provider.FlagProviderServer {
-	return provider.NewFlagProviderServer()
+func initFlagProviderServer(db *mongo.Database) *provider.FlagProviderServer {
+	providerRepo := provider.NewProviderRepository(db)
+
+	return provider.NewFlagProviderServer(providerRepo)
 }
 
 func connectMongo() *mongo.Client {
@@ -210,7 +212,7 @@ func main() {
 	projectServer := initProjectServer(db)
 	environmentServer := initEnvironmentServer(mongoClient, db)
 	flagServer := initFlagServer(mongoClient, db)
-	flagProviderServer := initFlagProviderServer()
+	flagProviderServer := initFlagProviderServer(db)
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
