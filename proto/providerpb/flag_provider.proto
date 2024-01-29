@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+option go_package = "github.com/waduhek/flagger/proto/providerpb";
+
+package providerpb;
+
+service FlagProvider {
+  // GetFlag returns the current status of the request flag in the environment.
+  rpc GetFlag(GetFlagRequest) returns (GetFlagResponse);
+}
+
+// === GetFlag messages ===
+
+// GetFlagRequest is the request body for getting the current status of the
+// flag.
+message GetFlagRequest {
+  // The name of the flag.
+  string flag_name = 2;
+  // The environment to fetch the flag from.
+  string environment = 1;
+}
+
+// GetFlagResponse is the response of getting the current staus of the flag.
+message GetFlagResponse {
+  // The current status of the flag.
+  bool status = 1;
+}
