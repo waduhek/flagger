@@ -15,6 +15,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/redis/go-redis/v9"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -34,6 +36,7 @@ import (
 )
 
 var mongoConnectionString string = os.Getenv("FLAGGER_MONGO_URI")
+var redisConnectionString string = os.Getenv("FLAGGER_REDIS_URI")
 
 var flaggerDB string = os.Getenv("FLAGGER_DB")
 
@@ -149,10 +152,14 @@ func initFlagServer(client *mongo.Client, db *mongo.Database) *flag.FlagServer {
 	)
 }
 
-func initFlagProviderServer(db *mongo.Database) *provider.FlagProviderServer {
+func initFlagProviderServer(
+	db *mongo.Database,
+	redisClient *redis.Client,
+) *provider.FlagProviderServer {
 	providerRepo := provider.NewProviderRepository(db)
+	cacheRepo := provider.NewProviderCacheRepository(redisClient)
 
-	return provider.NewFlagProviderServer(providerRepo)
+	return provider.NewFlagProviderServer(providerRepo, cacheRepo)
 }
 
 func connectMongo() *mongo.Client {
@@ -184,6 +191,26 @@ func connectMongo() *mongo.Client {
 	return client
 }
 
+func connectRedis() *redis.Client {
+	opt, err := redis.ParseURL(redisConnectionString)
+	if err != nil {
+		log.Panicf("could not parse redis connection string: %v", err)
+	}
+
+	client := redis.NewClient(opt)
+
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	pingErr := client.Ping(ctx).Err()
+	if pingErr != nil {
+		log.Panicf("error while pinging redis: %v", pingErr)
+	}
+
+	return client
+}
+
 func gracefulShutdown(cleanup func()) {
 	sig := make(chan os.Signal, 1)
 
@@ -205,14 +232,16 @@ func main() {
 	}
 
 	mongoClient := connectMongo()
-	db := mongoClient.Database(flaggerDB)
+	mongoDB := mongoClient.Database(flaggerDB)
+
+	redisClient := connectRedis()
 
 	// Initialising all the servers
-	authServer := initAuthServer(db)
-	projectServer := initProjectServer(db)
-	environmentServer := initEnvironmentServer(mongoClient, db)
-	flagServer := initFlagServer(mongoClient, db)
-	flagProviderServer := initFlagProviderServer(db)
+	authServer := initAuthServer(mongoDB)
+	projectServer := initProjectServer(mongoDB)
+	environmentServer := initEnvironmentServer(mongoClient, mongoDB)
+	flagServer := initFlagServer(mongoClient, mongoDB)
+	flagProviderServer := initFlagProviderServer(mongoDB, redisClient)
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
