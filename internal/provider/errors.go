@@ -18,3 +18,10 @@ var EIncorrectFlagDetailCount = status.Error(
 	codes.Internal,
 	"an unexpected number of flags were found",
 )
+
+// EStatusCache is a GRPC error that is returned when an error has occurred
+// while checking the cache for the flag status.
+var EStatusCache = status.Error(
+	codes.Internal,
+	"error occurred while checking flag status cache",
+)
