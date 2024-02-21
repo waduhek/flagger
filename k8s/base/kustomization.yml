@@ -1,0 +1,3 @@
+resources:
+  - mongo/headless-service.yml
+  - mongo/statefulset.yml
