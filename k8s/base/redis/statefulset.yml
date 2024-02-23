@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: redis
+  labels:
+    app: flagger
+    service: redis
+
+spec:
+  selector:
+    matchLabels:
+      app: flagger
+      service: redis
+
+  serviceName: redis-hlsvc
+  replicas: 1 # Not currently setup for HA.
+
+  template:
+    metadata:
+      labels:
+        app: flagger
+        service: redis
+
+    spec:
+      containers:
+        - name: redis
+          image: redis
+          command:
+            - redis-server
+            - /config/redis.conf
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - mountPath: /config
+              name: redis-config
+            - mountPath: /redis
+              name: redis-volume
+
+      volumes:
+        - name: redis-config
+          configMap:
+            name: redis-config
+
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-volume
+        labels:
+          app: flagger
+          service: redis
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Mi
