@@ -1,0 +1,6 @@
+# Add the port used for debugging to the list of exposed ports in the service
+- op: add
+  path: /spec/ports/1
+  value:
+    name: dlv-debug-port
+    port: 4040

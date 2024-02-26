@@ -1,0 +1,8 @@
+resources:
+  - ../../base
+
+patches:
+  - path: flagger/image-patch.yml
+    target:
+      kind: Deployment
+      name: api-server

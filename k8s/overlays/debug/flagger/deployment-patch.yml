@@ -1,0 +1,15 @@
+# Use the debug image when in debug mode.
+- op: replace
+  path: /spec/template/spec/containers/0/image
+  value: waduhek/flagger:debug
+
+# Prevent pulling the Flagger API server image when running in debug mode.
+- op: add
+  path: /spec/template/spec/containers/0/imagePullPolicy
+  value: Never
+
+# Expose the port used for debugging the application.
+- op: add
+  path: /spec/template/spec/containers/0/ports/1
+  value:
+    containerPort: 4040

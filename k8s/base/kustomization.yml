@@ -6,3 +6,6 @@ resources:
   - redis/headless-service.yml
   - redis/configmap.yml
   - redis/statefulset.yml
+  # API server resources.
+  - flagger/service.yml
+  - flagger/deployment.yml
