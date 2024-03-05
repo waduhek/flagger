@@ -17,69 +17,134 @@ as the cache, and GRPC for communications.
 
 ## Development
 
-Flagger requires Docker and Docker Compose for running.
+Flagger requires Docker and Kubernetes for running.
 
-* To build the development image, run:
+0. Copy the sample env files `sample.env` and `secret_sample.env` files to
+   `k8s/base` using:
 
-    ```bash
-    make build-dev
-    ```
+     ```bash
+     cp sample.env k8s/base/.env
+     cp secret_sample.env k8s/base/.env.secret
+     ```
 
-* [Optional] To build the debug image, run:
+   Once copied enter the values for the variables in `k8s/base/.env.secret`.
 
-    ```bash
-    make build-debug
-    ```
 
-* After the image has been built, you'll need to start MongoDB and Redis. It is
-  recommended to start these containers in a separate window using the following
-  command:
+1. Start a Kubernetes cluster on your machine. I've used
+   [`minikube`](https://minikube.sigs.k8s.io/docs/) and so the instructions here
+   are going to be with reference to `minikube`. Start a `minikube` cluster
+   using:
 
-    ```bash
-    make run-others
-    ```
+     ```bash
+     minikube start
+     ```
 
-* To run the development image, run:
+2. Set up the Docker environment for `minikube` using:
 
-    ```bash
-    make run-dev
-    ```
+     ```bash
+     eval $(minikube docker-env)
+     ```
 
-* [Optional] To run the debug image, run:
+   This will allow us to build the images directly into `minikube`.
 
-    ```bash
-    make run-debug
-    ```
+3. To build the development image, run:
 
-  The debug container will open a Delve debug port on port 4040. Connect to it
-  using:
+     ```bash
+     make build-dev
+     ```
 
-    ```bash
-    dlv connect localhost:4040
-    ```
+4. [Optional] To build the debug image, run:
+
+     ```bash
+     make build-debug
+     ```
+
+5. To start the application in development mode, run:
+
+     ```bash
+     kubectl apply -k k8s/overlays/dev
+     ```
+
+6. [Optional] To start the application in debug mode, run:
+
+     ```bash
+     kubectl apply -k k8s/overlays/debug
+     ```
+
+7. When the application first starts the API server will not be able to run as
+   MongoDB replicaset has not been setup up yet. To do so first, we to spin up a
+   new MongoDB pod using:
+
+     ```bash
+     kubectl run mongo --image mongo --rm -it -- bash
+     ```
+
+8. After a bash session has started, connect to the primary MongoDB instance
+   using:
+
+     ```bash
+     mongosh mongodb://mongo-0.mongo-hlsvc
+     ```
+
+9. Initiate the replicaset using the following `mongosh` command:
+
+     ```js
+     rs.initiate({
+         _id: 0,
+         members: [
+             { _id: 0, host: "mongo-0.mongo-hlsvc" },
+             { _id: 1, host: "mongo-1.mongo-hlsvc" },
+             { _id: 2, host: "mongo-2.mongo-hlsvc" },
+         ],
+     });
+     ```
+
+10. The replicaset will take a little while to initiate. The status of the
+    replicaset can be checked using the following `mongosh` command:
+
+      ```js
+      rs.status();
+      ```
+
+    Once you see one primary server and 2 secondary servers, you are ready to
+    go.
+
+11. Now, just wait for the API server to restart automatically and every thing
+    should work.
+
+12. To make requests to the API, you'll first need to get the IP of `minikube`
+    using:
+
+      ```bash
+      minikube ip
+      ```
+
+13. Next you'll need the port on which the API server is running. To get that
+    run:
+
+      ```bash
+      kubectl get service/api-server
+      ```
+
+    The port that you need will be mapped under the "PORT(S)" column.
+
+14. Now you can make requests to the service on the IP `$(minikube ip):<PORT>`.
+
+**Note**: Once you delete your local `minikube` cluster, you'll have to repeat
+steps 7 through 11 to setup the replicaset.
 
 ### Tearing down
 
-* To stop all running containers, run:
+To stop the all the deployed units in the cluster, run:
 
-    ```bash
-    make teardown-all
-    ```
+  ```bash
+  kubectl delete -k k8s/overlays/<overlay>
+  ```
 
-* To stop only MongoDB and Redis containers, run:
+Here, replace `<overlay>` with the overlay used to deploy units.
 
-    ```bash
-    make teardown-others
-    ```
+To delete all resources started by `minikube`, run:
 
-* To stop only the debug container, run:
-
-    ```bash
-    make teardown-debug
-    ```
-
-* To stop only the development container, run:
-
-    ```bash
-    make teardown-dev
-    ```
+  ```bash
+  minikube delete
+  ```
