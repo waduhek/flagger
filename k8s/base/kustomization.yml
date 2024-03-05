@@ -9,3 +9,13 @@ resources:
   # API server resources.
   - flagger/service.yml
   - flagger/deployment.yml
+
+configMapGenerator:
+  - name: flagger-config
+    envs:
+      - .env
+
+secretGenerator:
+  - name: flagger-secret
+    envs:
+      - .env.secret

@@ -27,3 +27,18 @@ spec:
           image: waduhek/flagger:latest
           ports:
             - containerPort: 50051
+          envFrom:
+            - configMapRef:
+                name: flagger-config
+            - secretRef:
+                name: flagger-secret
+
+
+      volumes:
+        - name: flagger-config
+          configMap:
+            name: flagger-config
+
+        - name: flagger-secret
+          secret:
+            secretName: flagger-secret
