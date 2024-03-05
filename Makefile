@@ -27,3 +27,12 @@ build-debug:
 .PHONY: build-dev
 build-dev:
 	docker build --target dev -t waduhek/flagger:dev .
+
+# --- Testing and benchmarking targets ---
+.PHONY: test
+test:
+	go test ./...
+
+.PHONY: bench
+bench:
+	go test -bench=. -run=^# -count=5 -benchmem ./...
