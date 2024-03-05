@@ -70,9 +70,9 @@ func (s *FlagProviderServer) GetFlag(
 
 	// Cache the result of this flag status for the next time.
 	cacheParams := cacheParameters{
-		ProjectKey: projectKey,
+		ProjectKey:      projectKey,
 		EnvironmentName: req.Environment,
-		FlagName: req.FlagName,
+		FlagName:        req.FlagName,
 	}
 
 	cacheErr := s.cacheRepo.CacheFlagStatus(ctx, &cacheParams, status)
@@ -95,9 +95,9 @@ func (s *FlagProviderServer) checkIfFlagStatusIsCached(
 	req *providerpb.GetFlagRequest,
 ) (bool, error) {
 	cacheParams := cacheParameters{
-		ProjectKey: projectKey,
+		ProjectKey:      projectKey,
 		EnvironmentName: req.Environment,
-		FlagName: req.FlagName,
+		FlagName:        req.FlagName,
 	}
 
 	statusExists, err := s.cacheRepo.IsFlagStatusCached(ctx, &cacheParams)
@@ -119,9 +119,9 @@ func (s *FlagProviderServer) getCachedFlagStatus(
 	req *providerpb.GetFlagRequest,
 ) (bool, error) {
 	cacheParams := cacheParameters{
-		ProjectKey: projectKey,
+		ProjectKey:      projectKey,
 		EnvironmentName: req.Environment,
-		FlagName: req.FlagName,
+		FlagName:        req.FlagName,
 	}
 
 	cachedStatus, err := s.cacheRepo.GetFlagStatus(ctx, &cacheParams)

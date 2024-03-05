@@ -19,7 +19,7 @@ type ProviderCacheRepository interface {
 	) (bool, error)
 
 	// GetFlagStatus gets the currently cached value of the flag status.
-	GetFlagStatus(ctx context.Context, params *cacheParameters,) (bool, error)
+	GetFlagStatus(ctx context.Context, params *cacheParameters) (bool, error)
 
 	// CacheFlagStatus caches the value of the flag status.
 	CacheFlagStatus(
