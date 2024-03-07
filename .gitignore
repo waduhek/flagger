@@ -1,6 +1,3 @@
-# Docker bind mount directory
-_docker
-
 # Build artifacts
 build
 
