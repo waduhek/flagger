@@ -1,0 +1,9 @@
+# Use the dev image when in dev mode.
+- op: replace
+  path: /spec/template/spec/containers/0/image
+  value: waduhek/flagger:dev
+
+# Prevent pulling the Flagger API server image when running in dev mode.
+- op: add
+  path: /spec/template/spec/containers/0/imagePullPolicy
+  value: Never

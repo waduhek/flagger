@@ -1,0 +1,13 @@
+resources:
+  - ../../base
+
+patches:
+  - path: flagger/deployment-patch.yml
+    target:
+      kind: Deployment
+      name: api-server
+
+  - path: flagger/service-patch.yml
+    target:
+      kind: Service
+      name: api-server

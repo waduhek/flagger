@@ -1,11 +1,9 @@
-# Docker bind mount directory
-_docker
-
 # Build artifacts
 build
 
 # Environment variables
 .env
+.env.secret
 
 # Miscellaneous files and directory
 .DS_Store

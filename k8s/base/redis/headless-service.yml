@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: redis-hlsvc
+  labels:
+    app: flagger
+    service: redis
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: flagger
+    service: redis
+
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+
+  clusterIP: None

@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: api-server
+  labels:
+    app: flagger
+    service: api-server
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: flagger
+      service: api-server
+
+  template:
+    metadata:
+      labels:
+        app: flagger
+        service: api-server
+
+    spec:
+      containers:
+        - name: api-server
+          image: waduhek/flagger:latest
+          ports:
+            - containerPort: 50051
+          envFrom:
+            - configMapRef:
+                name: flagger-config
+            - secretRef:
+                name: flagger-secret
+
+
+      volumes:
+        - name: flagger-config
+          configMap:
+            name: flagger-config
+
+        - name: flagger-secret
+          secret:
+            secretName: flagger-secret
