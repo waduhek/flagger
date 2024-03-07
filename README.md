@@ -90,7 +90,7 @@ Flagger requires Docker and Kubernetes for running.
 
      ```js
      rs.initiate({
-         _id: 0,
+         _id: "rs0",
          members: [
              { _id: 0, host: "mongo-0.mongo-hlsvc" },
              { _id: 1, host: "mongo-1.mongo-hlsvc" },
