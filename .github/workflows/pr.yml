@@ -16,7 +16,7 @@ jobs:
           go-version: "1.22.1"
 
       - name: GolangCI lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v4
 
   test:
     name: Run tests
