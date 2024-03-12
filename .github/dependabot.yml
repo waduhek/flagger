@@ -13,3 +13,10 @@ updates:
       interval: weekly
     assignees:
       - waduhek
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    assignees:
+      - waduhek
