@@ -9,6 +9,8 @@ import (
 
 // projectTokenMetadataKey is the metadata key for the incoming request
 // metadata to find the project token.
+//
+//nolint:gosec // This isn't a secret but a header key.
 const projectTokenMetadataKey = "x-flagger-token"
 
 // AuthoriseProject takes an incoming GRPC context and checks if the project

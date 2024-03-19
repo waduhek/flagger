@@ -9,7 +9,9 @@ import (
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret string = os.Getenv("FLAGGER_JWT_SECRET")
+var jwtSecret = os.Getenv("FLAGGER_JWT_SECRET")
+
+const tokenDuration = 24 * time.Hour
 
 type jwtClaimsKey struct{}
 
@@ -23,7 +25,7 @@ type FlaggerJWTClaims struct {
 // now. It also adds the provided username to the `sub` field of the token.
 func CreateJWT(username string) (string, error) {
 	now := time.Now()
-	expTime := now.Add(24 * time.Hour)
+	expTime := now.Add(tokenDuration)
 
 	claims := FlaggerJWTClaims{
 		RegisteredClaims: jwt.RegisteredClaims{

@@ -21,16 +21,21 @@ func (s *AuthServer) CreateNewUser(
 	ctx context.Context,
 	req *authpb.CreateNewUserRequest,
 ) (*authpb.CreateNewUserResponse, error) {
-	passwordHash, err := hash.GeneratePasswordHash(req.Password)
+	username := req.GetUsername()
+	password := req.GetPassword()
+	name := req.GetName()
+	email := req.GetEmail()
+
+	passwordHash, err := hash.GeneratePasswordHash(password)
 	if err != nil {
 		log.Printf("could not generate password hash: %v", err)
 		return nil, hash.EHashGenPasswordHash
 	}
 
 	newUser := user.User{
-		Username: req.Username,
-		Name:     req.Name,
-		Email:    req.Email,
+		Username: username,
+		Name:     name,
+		Email:    email,
 		Password: user.Password{
 			Hash: passwordHash.Hash,
 			Salt: passwordHash.Salt,
@@ -40,7 +45,7 @@ func (s *AuthServer) CreateNewUser(
 	newUserResult, err := s.userRepo.Save(ctx, &newUser)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			log.Printf("a user with username %q already exists", req.Username)
+			log.Printf("a user with username %q already exists", username)
 			return nil, user.EUsernameTaken
 		}
 
@@ -50,7 +55,7 @@ func (s *AuthServer) CreateNewUser(
 
 	log.Printf(
 		"created new user, username %s, id %s",
-		req.Username, newUserResult.InsertedID,
+		username, newUserResult.InsertedID,
 	)
 
 	response := authpb.CreateNewUserResponse{}
@@ -62,18 +67,21 @@ func (s *AuthServer) Login(
 	ctx context.Context,
 	req *authpb.LoginRequest,
 ) (*authpb.LoginResponse, error) {
-	fetchedUser, err := s.userRepo.GetByUsername(ctx, req.Username)
+	username := req.GetUsername()
+	password := req.GetPassword()
+
+	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("could not get details of user by username: %v", err)
 		return nil, user.ECouldNotFetchUser
 	}
 
 	if !hash.VerifyPasswordHash(
-		req.Password,
+		password,
 		fetchedUser.Password.Hash,
 		fetchedUser.Password.Salt,
 	) {
-		log.Printf("incorrect credentials for user \"%s\"", req.Username)
+		log.Printf("incorrect credentials for user \"%s\"", username)
 		return nil, EIncorrectUsernameOrPassword
 	}
 
@@ -106,8 +114,11 @@ func (s *AuthServer) ChangePassword(
 		return nil, user.ECouldNotFetchUser
 	}
 
+	currentPassword := req.GetCurrentPassword()
+	newPassword := req.GetNewPassword()
+
 	if !hash.VerifyPasswordHash(
-		req.CurrentPassword,
+		currentPassword,
 		fetchedUser.Password.Hash,
 		fetchedUser.Password.Salt,
 	) {
@@ -115,7 +126,7 @@ func (s *AuthServer) ChangePassword(
 		return nil, EIncorrectUsernameOrPassword
 	}
 
-	newPasswordHash, err := hash.GeneratePasswordHash(req.NewPassword)
+	newPasswordHash, err := hash.GeneratePasswordHash(newPassword)
 	if err != nil {
 		log.Printf("error while hashing password: %v", err)
 		return nil, hash.EHashGenPasswordHash

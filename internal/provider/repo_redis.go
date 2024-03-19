@@ -10,7 +10,7 @@ import (
 )
 
 // The TTL in seconds of the keys stored in the Redis cache.
-var cacheTTLSeconds, _ = time.ParseDuration(os.Getenv("FLAGGER_CACHE_TTL"))
+var cacheTTL, _ = time.ParseDuration(os.Getenv("FLAGGER_CACHE_TTL"))
 
 type providerCacheRepository struct {
 	rdb *redis.Client
@@ -50,7 +50,7 @@ func (r *providerCacheRepository) CacheFlagStatus(
 		ctx,
 		cacheKey,
 		status,
-		time.Duration(cacheTTLSeconds),
+		cacheTTL,
 	).Err()
 }
 

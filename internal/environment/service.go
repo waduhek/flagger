@@ -2,6 +2,7 @@ package environment
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -43,17 +44,20 @@ func (s *EnvironmentServer) CreateEnvironment(
 		return nil, user.ECouldNotFetchUser
 	}
 
+	projectName := req.GetProjectName()
+	environmentName := req.GetEnvironmentName()
+
 	// Check if the provided project exists with the user.
 	fetchedProject, err := s.projectRepo.GetByNameAndUserID(
 		ctx,
-		req.ProjectName,
+		projectName,
 		fetchedUser.ID,
 	)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			log.Printf(
 				"no projects were found with name %q with user %q",
-				req.ProjectName,
+				projectName,
 				username,
 			)
 			return nil, project.EProjectNotFound
@@ -86,8 +90,8 @@ func (s *EnvironmentServer) CreateEnvironment(
 
 	log.Printf(
 		"successfully created environment %q for project %q",
-		req.EnvironmentName,
-		req.ProjectName,
+		environmentName,
+		projectName,
 	)
 	return &environmentpb.CreateEnvironmentResponse{}, nil
 }
@@ -100,20 +104,22 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 	fetchedProject *project.Project,
 ) func(mongo.SessionContext) (interface{}, error) {
 	return func(ctx mongo.SessionContext) (interface{}, error) {
+		environmentName := req.GetEnvironmentName()
+
 		// Create a new environment.
 		newEnvironment := Environment{
-			Name:      req.EnvironmentName,
+			Name:      environmentName,
 			ProjectID: fetchedProject.ID,
 			CreatedBy: user.ID,
 			CreatedAt: time.Now(),
 		}
 
-		envResult, err := s.environmentRepo.Save(ctx, &newEnvironment)
-		if err != nil {
-			if mongo.IsDuplicateKeyError(err) {
+		envResult, envSaveErr := s.environmentRepo.Save(ctx, &newEnvironment)
+		if envSaveErr != nil {
+			if mongo.IsDuplicateKeyError(envSaveErr) {
 				log.Printf(
 					"an environment %q already exists for project %q",
-					req.EnvironmentName,
+					environmentName,
 					fetchedProject.Name,
 				)
 				return nil, EEnvironmentNameTaken
@@ -121,7 +127,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 
 			log.Printf(
 				"could not create environment %q for project %q",
-				req.EnvironmentName,
+				environmentName,
 				fetchedProject.ID,
 			)
 			return nil, EEnvironmentSave
@@ -152,12 +158,12 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 
 		// Save the flag settings to the collection.
 		if len(flagSettings) > 0 {
-			insertedFlagSettings, err := s.flagSettingRepo.SaveMany(
+			insertedFlagSettings, flagSettingSaveErr := s.flagSettingRepo.SaveMany(
 				ctx,
 				flagSettings,
 			)
-			if err != nil {
-				log.Printf("error while saving flag settings: %v", err)
+			if flagSettingSaveErr != nil {
+				log.Printf("error while saving flag settings: %v", flagSettingSaveErr)
 				return nil, flagsetting.EFlagSettingSave
 			}
 

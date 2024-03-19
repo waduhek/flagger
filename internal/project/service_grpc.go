@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -43,25 +44,27 @@ func (p *ProjectServer) CreateNewProject(
 		return nil, user.ECouldNotFetchUser
 	}
 
+	projectName := req.GetProjectName()
+
 	newProject := Project{
-		Name:      req.ProjectName,
+		Name:      projectName,
 		Key:       generateProjectKey(projectKeyLen),
 		CreatedBy: fetchedUser.ID,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
 
-	var projectErr error = nil
+	var projectErr error
 	for i := projectSaveRetries; i > 0; i-- {
 		_, projectErr = p.projectRepo.Save(ctx, &newProject)
 		// If the save was successful, then break out of the loop.
 		if projectErr == nil {
 			break
-		} else {
-			// If there was an error in saving the project, try again with a new
-			// project key.
-			newProject.Key = generateProjectKey(projectKeyLen)
 		}
+
+		// If there was an error in saving the project, try again with a new
+		// project key.
+		newProject.Key = generateProjectKey(projectKeyLen)
 	}
 	// If all attempts to save the project were unsuccessful, then return the
 	// error.
@@ -69,7 +72,7 @@ func (p *ProjectServer) CreateNewProject(
 		if mongo.IsDuplicateKeyError(projectErr) {
 			log.Printf(
 				"a project with name %q exists for user %q",
-				req.ProjectName,
+				projectName,
 				username,
 			)
 			return nil, EProjectNameTaken
@@ -100,20 +103,22 @@ func (p *ProjectServer) GetProjectKey(
 		return nil, user.ECouldNotFetchUser
 	}
 
+	projectName := req.GetProjectName()
+
 	project, err := p.projectRepo.GetByNameAndUserID(
 		ctx,
-		req.ProjectName,
+		projectName,
 		fetchedUser.ID,
 	)
 	if err != nil {
 		log.Printf(
 			"error while fetching project %q with user %q: %v",
-			req.ProjectName,
+			projectName,
 			username,
 			err,
 		)
 
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, EProjectNotFound
 		}
 

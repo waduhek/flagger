@@ -35,10 +35,10 @@ import (
 	"github.com/waduhek/flagger/internal/user"
 )
 
-var mongoConnectionString string = os.Getenv("FLAGGER_MONGO_URI")
-var redisConnectionString string = os.Getenv("FLAGGER_REDIS_URI")
+var mongoConnectionString = os.Getenv("FLAGGER_MONGO_URI")
+var redisConnectionString = os.Getenv("FLAGGER_REDIS_URI")
 
-var flaggerDB string = os.Getenv("FLAGGER_DB")
+var flaggerDB = os.Getenv("FLAGGER_DB")
 
 var serverPort, _ = strconv.ParseUint(os.Getenv("FLAGGER_PORT"), 10, 16)
 
@@ -163,11 +163,11 @@ func initFlagProviderServer(
 }
 
 func connectMongo() *mongo.Client {
-	serverApi := options.ServerAPI(options.ServerAPIVersion1)
+	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.
 		Client().
 		ApplyURI(mongoConnectionString).
-		SetServerAPIOptions(serverApi)
+		SetServerAPIOptions(serverAPI)
 
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
@@ -226,9 +226,9 @@ func gracefulShutdown(cleanup func()) {
 }
 
 func main() {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", serverPort))
-	if err != nil {
-		log.Panicf("could not listen on port %d: %v", serverPort, err)
+	lis, lisErr := net.Listen("tcp", fmt.Sprintf(":%d", serverPort))
+	if lisErr != nil {
+		log.Panicf("could not listen on port %d: %v", serverPort, lisErr)
 	}
 
 	mongoClient := connectMongo()
@@ -267,15 +267,15 @@ func main() {
 	gracefulShutdown(func() {
 		ctx := context.Background()
 
-		if err := mongoClient.Disconnect(ctx); err != nil {
-			log.Panicf("could not disconnect from mongodb: %v", err)
+		if disconnectErr := mongoClient.Disconnect(ctx); disconnectErr != nil {
+			log.Panicf("could not disconnect from mongodb: %v", disconnectErr)
 		}
 
 		grpcServer.GracefulStop()
 	})
 
 	log.Printf("flagger server listening at %q", lis.Addr().String())
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("could not serve: %v", err)
+	if serveErr := grpcServer.Serve(lis); serveErr != nil {
+		log.Fatalf("could not serve: %v", serveErr)
 	}
 }

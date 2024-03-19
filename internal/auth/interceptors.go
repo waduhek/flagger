@@ -37,7 +37,7 @@ func AuthoriseRequestInterceptor(serverPath string) grpc.UnaryServerInterceptor 
 		req any,
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
-	) (resp any, err error) {
+	) (any, error) {
 		if !strings.HasPrefix(info.FullMethod, serverPath) {
 			return handler(ctx, req)
 		}

@@ -2,6 +2,7 @@ package flag
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -48,23 +49,26 @@ func (s *FlagServer) CreateFlag(
 		return nil, user.ECouldNotFetchUser
 	}
 
+	projectName := req.GetProjectName()
+	flagName := req.GetFlagName()
+
 	// Get the project that the flag is to be added to. If the project does not
 	// belong to the currently authenticated user, or if the project doesn't
 	// exist, return an error.
 	fetchedProject, err := s.projectRepo.GetByNameAndUserID(
 		ctx,
-		req.ProjectName,
+		projectName,
 		fetchedUser.ID,
 	)
 	if err != nil {
 		log.Printf(
 			"error while getting project %q with user %q: %v",
-			req.ProjectName,
+			projectName,
 			username,
 			err,
 		)
 
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, project.EProjectNotFound
 		}
 
@@ -76,7 +80,7 @@ func (s *FlagServer) CreateFlag(
 	if len(fetchedProject.Environments) == 0 {
 		log.Printf(
 			"no environments are configured for the project %q cannot create flag",
-			req.ProjectName,
+			projectName,
 		)
 		return nil, ENoEnvironments
 	}
@@ -99,8 +103,8 @@ func (s *FlagServer) CreateFlag(
 
 	log.Printf(
 		"successfully created the flag %q in project %q",
-		req.FlagName,
-		req.ProjectName,
+		flagName,
+		projectName,
 	)
 	return &flagpb.CreateFlagResponse{}, nil
 }
@@ -112,9 +116,11 @@ func (s *FlagServer) handleCreateFlag(
 	fetchedProject *project.Project,
 ) mongoTxnCallback {
 	return func(ctx mongo.SessionContext) (interface{}, error) {
+		flagName := req.GetFlagName()
+
 		// Save the details of the flag.
 		newFlag := &Flag{
-			Name:      req.FlagName,
+			Name:      flagName,
 			ProjectID: fetchedProject.ID,
 			CreatedBy: user.ID,
 			CreatedAt: time.Now(),
@@ -132,7 +138,7 @@ func (s *FlagServer) handleCreateFlag(
 		}
 
 		// Cast the returned ID of the saved flag as an ObjectID.
-		savedFlagID := flagSaveResult.InsertedID.(primitive.ObjectID)
+		savedFlagID, _ := flagSaveResult.InsertedID.(primitive.ObjectID)
 
 		// Get all the environments that the project has.
 		projectEnvIDs := fetchedProject.Environments
@@ -223,16 +229,21 @@ func (s *FlagServer) UpdateFlagStatus(
 		return nil, user.ECouldNotFetchUser
 	}
 
+	projectName := req.GetProjectName()
+	environmentName := req.GetEnvironmentName()
+	flagName := req.GetFlagName()
+	isActive := req.GetIsActive()
+
 	// Get the project that the has to be updated.
 	fetchedProject, err := s.projectRepo.GetByNameAndUserID(
 		ctx,
-		req.ProjectName,
+		projectName,
 		fetchedUser.ID,
 	)
 	if err != nil {
-		log.Printf("error while fetching project %q: %v", req.ProjectName, err)
+		log.Printf("error while fetching project %q: %v", projectName, err)
 
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, project.EProjectNotFound
 		}
 
@@ -242,17 +253,17 @@ func (s *FlagServer) UpdateFlagStatus(
 	// Get the environment that is to be updated.
 	fetchedEnvironment, err := s.environmentRepo.GetByNameAndProjectID(
 		ctx,
-		req.EnvironmentName,
+		environmentName,
 		fetchedProject.ID,
 	)
 	if err != nil {
 		log.Printf(
 			"error while fetching environment %q: %v",
-			req.EnvironmentName,
+			environmentName,
 			err,
 		)
 
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, environment.EEnvironmentNotFound
 		}
 
@@ -262,13 +273,13 @@ func (s *FlagServer) UpdateFlagStatus(
 	// Get the flag to update.
 	flag, err := s.flagRepo.GetByNameAndProjectID(
 		ctx,
-		req.FlagName,
+		flagName,
 		fetchedProject.ID,
 	)
 	if err != nil {
-		log.Printf("error while fetching flag %q: %v", req.FlagName, err)
+		log.Printf("error while fetching flag %q: %v", flagName, err)
 
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, EFlagNotFound
 		}
 
@@ -281,7 +292,7 @@ func (s *FlagServer) UpdateFlagStatus(
 		fetchedProject.ID,
 		fetchedEnvironment.ID,
 		flag.ID,
-		req.IsActive,
+		isActive,
 	)
 	if err != nil {
 		log.Printf("error while updating flag setting: %v", err)
@@ -292,9 +303,9 @@ func (s *FlagServer) UpdateFlagStatus(
 	if updateResult.ModifiedCount == 0 {
 		log.Printf(
 			"no flag settings were updated for project %q, environment %q, flag %q",
-			req.ProjectName,
-			req.EnvironmentName,
-			req.FlagName,
+			projectName,
+			environmentName,
+			flagName,
 		)
 
 		return nil, EUpdateFlagStatus
