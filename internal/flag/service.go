@@ -38,7 +38,7 @@ func (s *FlagServer) CreateFlag(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Println("could not get token claims")
-		return nil, auth.ENoTokenClaims
+		return nil, auth.ErrNoTokenClaims
 	}
 
 	username := jwtClaims.Subject
@@ -46,7 +46,7 @@ func (s *FlagServer) CreateFlag(
 	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ECouldNotFetchUser
+		return nil, user.ErrCouldNotFetch
 	}
 
 	projectName := req.GetProjectName()
@@ -69,10 +69,10 @@ func (s *FlagServer) CreateFlag(
 		)
 
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, project.EProjectNotFound
+			return nil, project.ErrNotFound
 		}
 
-		return nil, project.EProjectFetch
+		return nil, project.ErrCouldNotFetch
 	}
 
 	// If there are no environments configured for the project, don't allow any
@@ -82,14 +82,14 @@ func (s *FlagServer) CreateFlag(
 			"no environments are configured for the project %q cannot create flag",
 			projectName,
 		)
-		return nil, ENoEnvironments
+		return nil, ErrNoEnvironments
 	}
 
 	// Start a transaction to save the flag.
 	txnSession, err := s.mongoClient.StartSession()
 	if err != nil {
 		log.Printf("could not start transaction to save flag: %v", err)
-		return nil, EFlagSaveTxn
+		return nil, ErrTxnSession
 	}
 
 	_, txnErr := txnSession.WithTransaction(
@@ -131,10 +131,10 @@ func (s *FlagServer) handleCreateFlag(
 			log.Printf("error while saving the flag: %v", err)
 
 			if mongo.IsDuplicateKeyError(err) {
-				return nil, EFlagNameTaken
+				return nil, ErrNameTaken
 			}
 
-			return nil, EFlagSave
+			return nil, ErrCouldNotSave
 		}
 
 		// Cast the returned ID of the saved flag as an ObjectID.
@@ -167,7 +167,7 @@ func (s *FlagServer) handleCreateFlag(
 		if err != nil {
 			log.Printf("error while saving flag settings: %v", err)
 
-			return nil, flagsetting.EFlagSettingSave
+			return nil, flagsetting.ErrCouldNotSave
 		}
 
 		// Cast the IDs of the flag settings as ObjectIDs.
@@ -188,7 +188,7 @@ func (s *FlagServer) handleCreateFlag(
 				projectFlagUpdateErr,
 			)
 
-			return nil, project.EProjectAddFlag
+			return nil, project.ErrAddFlag
 		}
 
 		// Add all the object IDs of the flag settings to the project.
@@ -203,7 +203,7 @@ func (s *FlagServer) handleCreateFlag(
 				projectSettingErr,
 			)
 
-			return nil, project.EProjectAddFlagSetting
+			return nil, project.ErrAddFlagSetting
 		}
 
 		return nil, nil
@@ -218,7 +218,7 @@ func (s *FlagServer) UpdateFlagStatus(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Println("could not get token claims")
-		return nil, auth.ENoTokenClaims
+		return nil, auth.ErrNoTokenClaims
 	}
 
 	username := jwtClaims.Subject
@@ -226,7 +226,7 @@ func (s *FlagServer) UpdateFlagStatus(
 	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ECouldNotFetchUser
+		return nil, user.ErrCouldNotFetch
 	}
 
 	projectName := req.GetProjectName()
@@ -244,10 +244,10 @@ func (s *FlagServer) UpdateFlagStatus(
 		log.Printf("error while fetching project %q: %v", projectName, err)
 
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, project.EProjectNotFound
+			return nil, project.ErrNotFound
 		}
 
-		return nil, project.EProjectFetch
+		return nil, project.ErrCouldNotFetch
 	}
 
 	// Get the environment that is to be updated.
@@ -264,10 +264,10 @@ func (s *FlagServer) UpdateFlagStatus(
 		)
 
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, environment.EEnvironmentNotFound
+			return nil, environment.ErrNotFound
 		}
 
-		return nil, environment.EEnvironmentFetch
+		return nil, environment.ErrCouldNotFetch
 	}
 
 	// Get the flag to update.
@@ -280,10 +280,10 @@ func (s *FlagServer) UpdateFlagStatus(
 		log.Printf("error while fetching flag %q: %v", flagName, err)
 
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, EFlagNotFound
+			return nil, ErrNotFound
 		}
 
-		return nil, EFlagFetch
+		return nil, ErrCouldNotFetch
 	}
 
 	// Update the flag setting to the desired value.
@@ -297,7 +297,7 @@ func (s *FlagServer) UpdateFlagStatus(
 	if err != nil {
 		log.Printf("error while updating flag setting: %v", err)
 
-		return nil, flagsetting.EFlagSettingStatusUpdate
+		return nil, flagsetting.ErrStatusUpdate
 	}
 
 	if updateResult.ModifiedCount == 0 {
@@ -308,7 +308,7 @@ func (s *FlagServer) UpdateFlagStatus(
 			flagName,
 		)
 
-		return nil, EUpdateFlagStatus
+		return nil, ErrUpdateStatus
 	}
 
 	return &flagpb.UpdateFlagStatusResponse{}, nil

@@ -17,13 +17,13 @@ func AuthoriseJWT(ctx context.Context) (context.Context, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		log.Printf("could not find incoming request metadata")
-		return nil, EMetadataNotFound
+		return nil, ErrMetadataNotFound
 	}
 
 	authHeader, ok := md["authorization"]
 	if !ok {
 		log.Printf("could not find authorization header")
-		return nil, EAuthMetadataNotFound
+		return nil, ErrAuthMetadataNotFound
 	}
 
 	if len(authHeader) != 1 {
@@ -31,7 +31,7 @@ func AuthoriseJWT(ctx context.Context) (context.Context, error) {
 			"authorization header was found to be of len %d which is not expected",
 			len(authHeader),
 		)
-		return nil, EAuthMetadataLength
+		return nil, ErrAuthMetadataLength
 	}
 
 	bearerToken := authHeader[0]
@@ -55,7 +55,7 @@ func validateJWT(token string) (*FlaggerJWTClaims, error) {
 	)
 	if !bearerTokenRegEx.MatchString(token) {
 		log.Println("token header format does not match")
-		return nil, EInvalidTokenFormat
+		return nil, ErrInvalidTokenFormat
 	}
 
 	headerJWT := strings.Split(token, " ")[1]

@@ -21,18 +21,18 @@ func AuthoriseProject(ctx context.Context) (context.Context, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		log.Println("could not find message metadata")
-		return nil, EMetadataNotFound
+		return nil, ErrMetadataNotFound
 	}
 
 	projectTokens, ok := md[projectTokenMetadataKey]
 	if !ok {
 		log.Println("could not find the project token")
-		return nil, EProjectKeyNotFound
+		return nil, ErrProjectKeyNotFound
 	}
 
 	if len(projectTokens) != 1 {
 		log.Println("multiple project tokens found in metadata")
-		return nil, EKeyMetadataLength
+		return nil, ErrKeyMetadataLength
 	}
 
 	projectToken := projectTokens[0]

@@ -33,7 +33,7 @@ func (p *ProjectServer) CreateNewProject(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find claims from token")
-		return nil, auth.ENoTokenClaims
+		return nil, auth.ErrNoTokenClaims
 	}
 
 	username := jwtClaims.Subject
@@ -41,7 +41,7 @@ func (p *ProjectServer) CreateNewProject(
 	fetchedUser, err := p.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ECouldNotFetchUser
+		return nil, user.ErrCouldNotFetch
 	}
 
 	projectName := req.GetProjectName()
@@ -75,11 +75,11 @@ func (p *ProjectServer) CreateNewProject(
 				projectName,
 				username,
 			)
-			return nil, EProjectNameTaken
+			return nil, ErrNameTaken
 		}
 
 		log.Printf("error while creating new project: %v", projectErr)
-		return nil, EProjectSave
+		return nil, ErrCouldNotSave
 	}
 
 	return &projectpb.CreateNewProjectResponse{}, nil
@@ -92,7 +92,7 @@ func (p *ProjectServer) GetProjectKey(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find claims from token")
-		return nil, auth.ENoTokenClaims
+		return nil, auth.ErrNoTokenClaims
 	}
 
 	username := jwtClaims.Subject
@@ -100,7 +100,7 @@ func (p *ProjectServer) GetProjectKey(
 	fetchedUser, err := p.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ECouldNotFetchUser
+		return nil, user.ErrCouldNotFetch
 	}
 
 	projectName := req.GetProjectName()
@@ -119,10 +119,10 @@ func (p *ProjectServer) GetProjectKey(
 		)
 
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, EProjectNotFound
+			return nil, ErrNotFound
 		}
 
-		return nil, EProjectFetch
+		return nil, ErrCouldNotFetch
 	}
 
 	response := projectpb.GetProjectKeyResponse{ProjectKey: project.Key}

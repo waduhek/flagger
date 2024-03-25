@@ -33,7 +33,7 @@ func (s *EnvironmentServer) CreateEnvironment(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find jwt claims in request context")
-		return nil, auth.ENoTokenClaims
+		return nil, auth.ErrNoTokenClaims
 	}
 
 	username := jwtClaims.Subject
@@ -41,7 +41,7 @@ func (s *EnvironmentServer) CreateEnvironment(
 	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ECouldNotFetchUser
+		return nil, user.ErrCouldNotFetch
 	}
 
 	projectName := req.GetProjectName()
@@ -60,11 +60,11 @@ func (s *EnvironmentServer) CreateEnvironment(
 				projectName,
 				username,
 			)
-			return nil, project.EProjectNotFound
+			return nil, project.ErrNotFound
 		}
 
 		log.Printf("error occurred while fetching projects: %v", err)
-		return nil, project.EProjectFetch
+		return nil, project.ErrCouldNotFetch
 	}
 
 	// Create a session that will initiate a transaction to save the details of
@@ -72,7 +72,7 @@ func (s *EnvironmentServer) CreateEnvironment(
 	session, err := s.mongoClient.StartSession()
 	if err != nil {
 		log.Printf("could not create a new session: %v", err)
-		return nil, EEnvironmentTxn
+		return nil, ErrTxnSession
 	}
 
 	// Start the transaction to save the environment.
@@ -122,7 +122,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 					environmentName,
 					fetchedProject.Name,
 				)
-				return nil, EEnvironmentNameTaken
+				return nil, ErrNameTaken
 			}
 
 			log.Printf(
@@ -130,14 +130,14 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 				environmentName,
 				fetchedProject.ID,
 			)
-			return nil, EEnvironmentSave
+			return nil, ErrCouldNotSave
 		}
 
 		// Cast the returned ID of the inserted environment as an ObjectID.
 		environmentID, ok := envResult.InsertedID.(primitive.ObjectID)
 		if !ok {
 			log.Printf("environment ID is not of type ObjectID")
-			return nil, EEnvironmentIDCast
+			return nil, ErrEnvironmentIDCast
 		}
 
 		// Create new flag settings for all the flags that are present in the
@@ -164,7 +164,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 			)
 			if flagSettingSaveErr != nil {
 				log.Printf("error while saving flag settings: %v", flagSettingSaveErr)
-				return nil, flagsetting.EFlagSettingSave
+				return nil, flagsetting.ErrCouldNotSave
 			}
 
 			// Cast the IDs of all the flag settings as ObjectIDs.
@@ -187,7 +187,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 					"error while updating project with flag settings: %v",
 					projectFlagSettingErr,
 				)
-				return nil, project.EProjectAddFlagSetting
+				return nil, project.ErrAddFlagSetting
 			}
 		}
 
@@ -204,7 +204,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 				fetchedProject.ID,
 				projectUpdateErr,
 			)
-			return nil, project.EProjectAddEnvironment
+			return nil, project.ErrAddEnvironment
 		}
 
 		return nil, nil

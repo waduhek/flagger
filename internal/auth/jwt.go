@@ -43,7 +43,7 @@ func CreateJWT(username string) (string, error) {
 	token, err := tokenGenerator.SignedString([]byte(jwtSecret))
 	if err != nil {
 		log.Printf("could not sign jwt: %v", err)
-		return "", EJWTSign
+		return "", ErrJWTSign
 	}
 
 	return token, nil
@@ -58,7 +58,7 @@ func VerifyJWT(str string) (*FlaggerJWTClaims, error) {
 		&FlaggerJWTClaims{},
 		func(t *jwt.Token) (interface{}, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, EInvalidJWT
+				return nil, ErrInvalidJWT
 			}
 
 			return []byte(jwtSecret), nil
@@ -71,13 +71,13 @@ func VerifyJWT(str string) (*FlaggerJWTClaims, error) {
 
 	if !parsedToken.Valid {
 		log.Println("token is not valid")
-		return nil, EInvalidJWT
+		return nil, ErrInvalidJWT
 	}
 
 	claims, ok := parsedToken.Claims.(*FlaggerJWTClaims)
 	if !ok {
 		log.Println("could not parse token claims as RegisteredClaims")
-		return nil, ENoTokenClaims
+		return nil, ErrNoTokenClaims
 	}
 
 	return claims, nil

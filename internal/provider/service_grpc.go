@@ -26,7 +26,7 @@ func (s *FlagProviderServer) GetFlag(
 	projectKey, ok := project.ProjectKeyFromContext(ctx)
 	if !ok {
 		log.Printf("could not find project key in request")
-		return nil, project.EProjectKeyNotFound
+		return nil, project.ErrProjectKeyNotFound
 	}
 
 	// Check if the flag status has been cached previously and return it.
@@ -62,12 +62,12 @@ func (s *FlagProviderServer) GetFlag(
 	)
 	if err != nil {
 		log.Printf("error while fetching details of the flag: %v", err)
-		return nil, EFetchFlagDetails
+		return nil, ErrFetchFlagDetails
 	}
 
 	if len(flagDetails) != 1 {
 		log.Printf("found %d responses of flag details", len(flagDetails))
-		return nil, EIncorrectFlagDetailCount
+		return nil, ErrIncorrectFlagDetailCount
 	}
 
 	flagDetail := flagDetails[0]
@@ -114,7 +114,7 @@ func (s *FlagProviderServer) checkIfFlagStatusIsCached(
 			"error occurred while checking if flag status is cached: %v",
 			err,
 		)
-		return false, EStatusCache
+		return false, ErrStatusCache
 	}
 
 	return statusExists, nil

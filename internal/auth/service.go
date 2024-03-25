@@ -29,7 +29,7 @@ func (s *AuthServer) CreateNewUser(
 	passwordHash, err := hash.GeneratePasswordHash(password)
 	if err != nil {
 		log.Printf("could not generate password hash: %v", err)
-		return nil, hash.EHashGenPasswordHash
+		return nil, hash.ErrGenPasswordHash
 	}
 
 	newUser := user.User{
@@ -46,11 +46,11 @@ func (s *AuthServer) CreateNewUser(
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			log.Printf("a user with username %q already exists", username)
-			return nil, user.EUsernameTaken
+			return nil, user.ErrUsernameTaken
 		}
 
 		log.Printf("could not save user details: %v", err)
-		return nil, user.EUserNotSaved
+		return nil, user.ErrNotSaved
 	}
 
 	log.Printf(
@@ -73,7 +73,7 @@ func (s *AuthServer) Login(
 	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("could not get details of user by username: %v", err)
-		return nil, user.ECouldNotFetchUser
+		return nil, user.ErrCouldNotFetch
 	}
 
 	if !hash.VerifyPasswordHash(
@@ -82,7 +82,7 @@ func (s *AuthServer) Login(
 		fetchedUser.Password.Salt,
 	) {
 		log.Printf("incorrect credentials for user \"%s\"", username)
-		return nil, EIncorrectUsernameOrPassword
+		return nil, ErrIncorrectUsernameOrPassword
 	}
 
 	token, err := CreateJWT(fetchedUser.Username)
@@ -103,7 +103,7 @@ func (s *AuthServer) ChangePassword(
 	claims, ok := ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find claims from token")
-		return nil, ENoTokenClaims
+		return nil, ErrNoTokenClaims
 	}
 
 	username := claims.Subject
@@ -111,7 +111,7 @@ func (s *AuthServer) ChangePassword(
 	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ECouldNotFetchUser
+		return nil, user.ErrCouldNotFetch
 	}
 
 	currentPassword := req.GetCurrentPassword()
@@ -123,13 +123,13 @@ func (s *AuthServer) ChangePassword(
 		fetchedUser.Password.Salt,
 	) {
 		log.Printf("incorrect current password for resetting password")
-		return nil, EIncorrectUsernameOrPassword
+		return nil, ErrIncorrectUsernameOrPassword
 	}
 
 	newPasswordHash, err := hash.GeneratePasswordHash(newPassword)
 	if err != nil {
 		log.Printf("error while hashing password: %v", err)
-		return nil, hash.EHashGenPasswordHash
+		return nil, hash.ErrGenPasswordHash
 	}
 
 	password := user.Password{
@@ -140,7 +140,7 @@ func (s *AuthServer) ChangePassword(
 	_, updateErr := s.userRepo.UpdatePassword(ctx, username, &password)
 	if updateErr != nil {
 		log.Printf("error while saving new password: %v", updateErr)
-		return nil, user.EPasswordUpdate
+		return nil, user.ErrPasswordUpdate
 	}
 
 	log.Printf("changed password for user %q", username)
