@@ -14,7 +14,7 @@ import (
 
 type AuthServer struct {
 	authpb.UnimplementedAuthServer
-	userRepo user.UserRepository
+	userDataRepo user.DataRepository
 }
 
 func (s *AuthServer) CreateNewUser(
@@ -42,7 +42,7 @@ func (s *AuthServer) CreateNewUser(
 		},
 	}
 
-	newUserResult, err := s.userRepo.Save(ctx, &newUser)
+	newUserResult, err := s.userDataRepo.Save(ctx, &newUser)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			log.Printf("a user with username %q already exists", username)
@@ -70,7 +70,7 @@ func (s *AuthServer) Login(
 	username := req.GetUsername()
 	password := req.GetPassword()
 
-	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("could not get details of user by username: %v", err)
 		return nil, user.ErrCouldNotFetch
@@ -108,7 +108,7 @@ func (s *AuthServer) ChangePassword(
 
 	username := claims.Subject
 
-	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
 		return nil, user.ErrCouldNotFetch
@@ -137,7 +137,7 @@ func (s *AuthServer) ChangePassword(
 		Salt: newPasswordHash.Salt,
 	}
 
-	_, updateErr := s.userRepo.UpdatePassword(ctx, username, &password)
+	_, updateErr := s.userDataRepo.UpdatePassword(ctx, username, &password)
 	if updateErr != nil {
 		log.Printf("error while saving new password: %v", updateErr)
 		return nil, user.ErrPasswordUpdate
@@ -148,8 +148,8 @@ func (s *AuthServer) ChangePassword(
 }
 
 // NewAuthServer creates a new server for the auth service.
-func NewAuthServer(userRepo user.UserRepository) *AuthServer {
-	server := &AuthServer{userRepo: userRepo}
+func NewAuthServer(userDataRepo user.DataRepository) *AuthServer {
+	server := &AuthServer{userDataRepo: userDataRepo}
 
 	return server
 }

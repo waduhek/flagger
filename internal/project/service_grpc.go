@@ -22,8 +22,8 @@ const projectSaveRetries uint = 5
 
 type ProjectServer struct {
 	projectpb.UnimplementedProjectServer
-	projectRepo ProjectRepository
-	userRepo    user.UserRepository
+	projectRepo  ProjectRepository
+	userDataRepo user.DataRepository
 }
 
 func (p *ProjectServer) CreateNewProject(
@@ -38,7 +38,7 @@ func (p *ProjectServer) CreateNewProject(
 
 	username := jwtClaims.Subject
 
-	fetchedUser, err := p.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := p.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
 		return nil, user.ErrCouldNotFetch
@@ -97,7 +97,7 @@ func (p *ProjectServer) GetProjectKey(
 
 	username := jwtClaims.Subject
 
-	fetchedUser, err := p.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := p.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
 		return nil, user.ErrCouldNotFetch
@@ -133,7 +133,7 @@ func (p *ProjectServer) GetProjectKey(
 // NewProjectServer creates a new server for the project service.
 func NewProjectServer(
 	projectRepo ProjectRepository,
-	userRepo user.UserRepository,
+	userDataRepo user.DataRepository,
 ) *ProjectServer {
-	return &ProjectServer{projectRepo: projectRepo, userRepo: userRepo}
+	return &ProjectServer{projectRepo: projectRepo, userDataRepo: userDataRepo}
 }

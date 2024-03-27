@@ -10,11 +10,11 @@ import (
 
 const userCollection string = "users"
 
-type userRepository struct {
+type MongoDataRepository struct {
 	coll *mongo.Collection
 }
 
-func (u *userRepository) Save(
+func (u *MongoDataRepository) Save(
 	ctx context.Context,
 	user *User,
 ) (*mongo.InsertOneResult, error) {
@@ -23,7 +23,7 @@ func (u *userRepository) Save(
 	return result, err
 }
 
-func (u *userRepository) GetByUsername(
+func (u *MongoDataRepository) GetByUsername(
 	ctx context.Context,
 	username string,
 ) (*User, error) {
@@ -35,7 +35,7 @@ func (u *userRepository) GetByUsername(
 	return &user, err
 }
 
-func (u *userRepository) UpdatePassword(
+func (u *MongoDataRepository) UpdatePassword(
 	ctx context.Context,
 	username string,
 	password *Password,
@@ -67,7 +67,7 @@ func setupUserCollIndexes(ctx context.Context, coll *mongo.Collection) error {
 func NewUserRepository(
 	ctx context.Context,
 	db *mongo.Database,
-) (*userRepository, error) {
+) (*MongoDataRepository, error) {
 	coll := db.Collection(userCollection)
 
 	err := setupUserCollIndexes(ctx, coll)
@@ -75,6 +75,6 @@ func NewUserRepository(
 		return nil, err
 	}
 
-	repo := &userRepository{coll}
+	repo := &MongoDataRepository{coll}
 	return repo, nil
 }

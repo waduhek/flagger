@@ -21,7 +21,7 @@ import (
 type FlagServer struct {
 	flagpb.UnimplementedFlagServer
 	mongoClient     *mongo.Client
-	userRepo        user.UserRepository
+	userDataRepo    user.DataRepository
 	projectRepo     project.ProjectRepository
 	environmentRepo environment.EnvironmentRepository
 	flagRepo        FlagRepository
@@ -43,7 +43,7 @@ func (s *FlagServer) CreateFlag(
 
 	username := jwtClaims.Subject
 
-	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
 		return nil, user.ErrCouldNotFetch
@@ -223,7 +223,7 @@ func (s *FlagServer) UpdateFlagStatus(
 
 	username := jwtClaims.Subject
 
-	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
 		return nil, user.ErrCouldNotFetch
@@ -317,7 +317,7 @@ func (s *FlagServer) UpdateFlagStatus(
 // NewFlagServer creates a new `FlagServer` for serving GRPC requests.
 func NewFlagServer(
 	mongoClient *mongo.Client,
-	userRepo user.UserRepository,
+	userDataRepo user.DataRepository,
 	projectRepo project.ProjectRepository,
 	environmentRepo environment.EnvironmentRepository,
 	flagRepo FlagRepository,
@@ -325,7 +325,7 @@ func NewFlagServer(
 ) *FlagServer {
 	return &FlagServer{
 		mongoClient:     mongoClient,
-		userRepo:        userRepo,
+		userDataRepo:    userDataRepo,
 		projectRepo:     projectRepo,
 		environmentRepo: environmentRepo,
 		flagRepo:        flagRepo,

@@ -20,7 +20,7 @@ import (
 type EnvironmentServer struct {
 	environmentpb.UnimplementedEnvironmentServer
 	mongoClient     *mongo.Client
-	userRepo        user.UserRepository
+	userDataRepo    user.DataRepository
 	projectRepo     project.ProjectRepository
 	flagSettingRepo flagsetting.FlagSettingRepository
 	environmentRepo EnvironmentRepository
@@ -38,7 +38,7 @@ func (s *EnvironmentServer) CreateEnvironment(
 
 	username := jwtClaims.Subject
 
-	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
 		return nil, user.ErrCouldNotFetch
@@ -213,14 +213,14 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 
 func NewEnvironmentServer(
 	client *mongo.Client,
-	userRepo user.UserRepository,
+	userDataRepo user.DataRepository,
 	projectRepo project.ProjectRepository,
 	flagSettingRepo flagsetting.FlagSettingRepository,
 	environmentRepo EnvironmentRepository,
 ) *EnvironmentServer {
 	return &EnvironmentServer{
 		mongoClient:     client,
-		userRepo:        userRepo,
+		userDataRepo:    userDataRepo,
 		projectRepo:     projectRepo,
 		flagSettingRepo: flagSettingRepo,
 		environmentRepo: environmentRepo,
