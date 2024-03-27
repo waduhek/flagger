@@ -9,9 +9,6 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// The TTL in seconds of the keys stored in the Redis cache.
-var cacheTTL, _ = time.ParseDuration(os.Getenv("FLAGGER_CACHE_TTL"))
-
 type providerCacheRepository struct {
 	rdb *redis.Client
 }
@@ -44,6 +41,9 @@ func (r *providerCacheRepository) CacheFlagStatus(
 	params *cacheParameters,
 	status bool,
 ) error {
+	// The TTL in seconds of the keys stored in the Redis cache.
+	cacheTTL, _ := time.ParseDuration(os.Getenv("FLAGGER_CACHE_TTL"))
+
 	cacheKey := genFlagStatusCacheKey(params)
 
 	return r.rdb.SetEx(

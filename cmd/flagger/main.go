@@ -35,13 +35,6 @@ import (
 	"github.com/waduhek/flagger/internal/user"
 )
 
-var mongoConnectionString = os.Getenv("FLAGGER_MONGO_URI")
-var redisConnectionString = os.Getenv("FLAGGER_REDIS_URI")
-
-var flaggerDB = os.Getenv("FLAGGER_DB")
-
-var serverPort, _ = strconv.ParseUint(os.Getenv("FLAGGER_PORT"), 10, 16)
-
 func initAuthServer(db *mongo.Database) *auth.AuthServer {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
@@ -163,6 +156,8 @@ func initFlagProviderServer(
 }
 
 func connectMongo() *mongo.Client {
+	mongoConnectionString := os.Getenv("FLAGGER_MONGO_URI")
+
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.
 		Client().
@@ -192,6 +187,8 @@ func connectMongo() *mongo.Client {
 }
 
 func connectRedis() *redis.Client {
+	redisConnectionString := os.Getenv("FLAGGER_REDIS_URI")
+
 	opt, err := redis.ParseURL(redisConnectionString)
 	if err != nil {
 		log.Panicf("could not parse redis connection string: %v", err)
@@ -226,6 +223,9 @@ func gracefulShutdown(cleanup func()) {
 }
 
 func main() {
+	flaggerDB := os.Getenv("FLAGGER_DB")
+	serverPort, _ := strconv.ParseUint(os.Getenv("FLAGGER_PORT"), 10, 16)
+
 	lis, lisErr := net.Listen("tcp", fmt.Sprintf(":%d", serverPort))
 	if lisErr != nil {
 		log.Panicf("could not listen on port %d: %v", serverPort, lisErr)

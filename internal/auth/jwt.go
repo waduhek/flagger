@@ -9,8 +9,6 @@ import (
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret = os.Getenv("FLAGGER_JWT_SECRET")
-
 const tokenDuration = 24 * time.Hour
 
 type jwtClaimsKey struct{}
@@ -24,6 +22,8 @@ type FlaggerJWTClaims struct {
 // CreateJWT generates a new JWT with an expiry time that is 24 hours from
 // now. It also adds the provided username to the `sub` field of the token.
 func CreateJWT(username string) (string, error) {
+	jwtSecret := os.Getenv("FLAGGER_JWT_SECRET")
+
 	now := time.Now()
 	expTime := now.Add(tokenDuration)
 
@@ -53,6 +53,8 @@ func CreateJWT(username string) (string, error) {
 // FlaggerJWTClaims as the claims. All errors returned from this function are
 // GRPC compliant.
 func VerifyJWT(str string) (*FlaggerJWTClaims, error) {
+	jwtSecret := os.Getenv("FLAGGER_JWT_SECRET")
+
 	parsedToken, err := jwt.ParseWithClaims(
 		str,
 		&FlaggerJWTClaims{},
