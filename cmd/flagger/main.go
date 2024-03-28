@@ -35,7 +35,7 @@ import (
 	"github.com/waduhek/flagger/internal/user"
 )
 
-func initAuthServer(db *mongo.Database) *auth.AuthServer {
+func initAuthServer(db *mongo.Database) *auth.Server {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -45,7 +45,7 @@ func initAuthServer(db *mongo.Database) *auth.AuthServer {
 		log.Panicf("could not initialise user repository: %v", err)
 	}
 
-	authServer := auth.NewAuthServer(userRepo)
+	authServer := auth.NewServer(userRepo)
 
 	return authServer
 }
@@ -245,7 +245,7 @@ func main() {
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			auth.AuthServerUnaryInterceptor,
+			auth.UnaryServerInterceptor,
 			auth.AuthoriseRequestInterceptor("/projectpb.Project/"),
 			auth.AuthoriseRequestInterceptor(
 				"/environmentpb.Environment/",

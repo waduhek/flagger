@@ -9,9 +9,9 @@ import (
 	"github.com/waduhek/flagger/proto/authpb"
 )
 
-// AuthServerUnaryInterceptor intercepts the requests coming to the
+// UnaryServerInterceptor intercepts the requests coming to the
 // authentication service.
-func AuthServerUnaryInterceptor(
+func UnaryServerInterceptor(
 	ctx context.Context,
 	req any,
 	info *grpc.UnaryServerInfo,

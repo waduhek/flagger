@@ -12,12 +12,12 @@ import (
 	"github.com/waduhek/flagger/internal/user"
 )
 
-type AuthServer struct {
+type Server struct {
 	authpb.UnimplementedAuthServer
 	userDataRepo user.DataRepository
 }
 
-func (s *AuthServer) CreateNewUser(
+func (s *Server) CreateNewUser(
 	ctx context.Context,
 	req *authpb.CreateNewUserRequest,
 ) (*authpb.CreateNewUserResponse, error) {
@@ -63,7 +63,7 @@ func (s *AuthServer) CreateNewUser(
 	return &response, nil
 }
 
-func (s *AuthServer) Login(
+func (s *Server) Login(
 	ctx context.Context,
 	req *authpb.LoginRequest,
 ) (*authpb.LoginResponse, error) {
@@ -96,7 +96,7 @@ func (s *AuthServer) Login(
 	return response, nil
 }
 
-func (s *AuthServer) ChangePassword(
+func (s *Server) ChangePassword(
 	ctx context.Context,
 	req *authpb.ChangePasswordRequest,
 ) (*authpb.ChangePasswordResponse, error) {
@@ -147,9 +147,9 @@ func (s *AuthServer) ChangePassword(
 	return &authpb.ChangePasswordResponse{}, nil
 }
 
-// NewAuthServer creates a new server for the auth service.
-func NewAuthServer(userDataRepo user.DataRepository) *AuthServer {
-	server := &AuthServer{userDataRepo: userDataRepo}
+// NewServer creates a new server for the auth service.
+func NewServer(userDataRepo user.DataRepository) *Server {
+	server := &Server{userDataRepo: userDataRepo}
 
 	return server
 }
