@@ -5,9 +5,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// EHashGenPasswordHash is a GRPC error that is returned when the hash of a password
+// ErrGenPasswordHash is a GRPC error that is returned when the hash of a password
 // could not be generated.
-var EHashGenPasswordHash = status.Error(
+var ErrGenPasswordHash = status.Error(
 	codes.Internal,
 	"could not hash the password",
 )

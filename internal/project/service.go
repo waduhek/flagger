@@ -16,6 +16,7 @@ func generateProjectKey(n uint) string {
 	b := make([]byte, n)
 
 	for i := range b {
+		//nolint:gosec // TODO: Think about how to generate a more unique key.
 		b[i] = letters[rand.Intn(lettersLen)]
 	}
 

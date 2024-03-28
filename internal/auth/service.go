@@ -12,45 +12,50 @@ import (
 	"github.com/waduhek/flagger/internal/user"
 )
 
-type AuthServer struct {
+type Server struct {
 	authpb.UnimplementedAuthServer
-	userRepo user.UserRepository
+	userDataRepo user.DataRepository
 }
 
-func (s *AuthServer) CreateNewUser(
+func (s *Server) CreateNewUser(
 	ctx context.Context,
 	req *authpb.CreateNewUserRequest,
 ) (*authpb.CreateNewUserResponse, error) {
-	passwordHash, err := hash.GeneratePasswordHash(req.Password)
+	username := req.GetUsername()
+	password := req.GetPassword()
+	name := req.GetName()
+	email := req.GetEmail()
+
+	passwordHash, err := hash.GeneratePasswordHash(password)
 	if err != nil {
 		log.Printf("could not generate password hash: %v", err)
-		return nil, hash.EHashGenPasswordHash
+		return nil, hash.ErrGenPasswordHash
 	}
 
 	newUser := user.User{
-		Username: req.Username,
-		Name:     req.Name,
-		Email:    req.Email,
+		Username: username,
+		Name:     name,
+		Email:    email,
 		Password: user.Password{
 			Hash: passwordHash.Hash,
 			Salt: passwordHash.Salt,
 		},
 	}
 
-	newUserResult, err := s.userRepo.Save(ctx, &newUser)
+	newUserResult, err := s.userDataRepo.Save(ctx, &newUser)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			log.Printf("a user with username %q already exists", req.Username)
-			return nil, user.EUsernameTaken
+			log.Printf("a user with username %q already exists", username)
+			return nil, user.ErrUsernameTaken
 		}
 
 		log.Printf("could not save user details: %v", err)
-		return nil, user.EUserNotSaved
+		return nil, user.ErrNotSaved
 	}
 
 	log.Printf(
 		"created new user, username %s, id %s",
-		req.Username, newUserResult.InsertedID,
+		username, newUserResult.InsertedID,
 	)
 
 	response := authpb.CreateNewUserResponse{}
@@ -58,23 +63,26 @@ func (s *AuthServer) CreateNewUser(
 	return &response, nil
 }
 
-func (s *AuthServer) Login(
+func (s *Server) Login(
 	ctx context.Context,
 	req *authpb.LoginRequest,
 ) (*authpb.LoginResponse, error) {
-	fetchedUser, err := s.userRepo.GetByUsername(ctx, req.Username)
+	username := req.GetUsername()
+	password := req.GetPassword()
+
+	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("could not get details of user by username: %v", err)
-		return nil, user.ECouldNotFetchUser
+		return nil, user.ErrCouldNotFetch
 	}
 
 	if !hash.VerifyPasswordHash(
-		req.Password,
+		password,
 		fetchedUser.Password.Hash,
 		fetchedUser.Password.Salt,
 	) {
-		log.Printf("incorrect credentials for user \"%s\"", req.Username)
-		return nil, EIncorrectUsernameOrPassword
+		log.Printf("incorrect credentials for user \"%s\"", username)
+		return nil, ErrIncorrectUsernameOrPassword
 	}
 
 	token, err := CreateJWT(fetchedUser.Username)
@@ -88,37 +96,40 @@ func (s *AuthServer) Login(
 	return response, nil
 }
 
-func (s *AuthServer) ChangePassword(
+func (s *Server) ChangePassword(
 	ctx context.Context,
 	req *authpb.ChangePasswordRequest,
 ) (*authpb.ChangePasswordResponse, error) {
 	claims, ok := ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find claims from token")
-		return nil, ENoTokenClaims
+		return nil, ErrNoTokenClaims
 	}
 
 	username := claims.Subject
 
-	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ECouldNotFetchUser
+		return nil, user.ErrCouldNotFetch
 	}
 
+	currentPassword := req.GetCurrentPassword()
+	newPassword := req.GetNewPassword()
+
 	if !hash.VerifyPasswordHash(
-		req.CurrentPassword,
+		currentPassword,
 		fetchedUser.Password.Hash,
 		fetchedUser.Password.Salt,
 	) {
 		log.Printf("incorrect current password for resetting password")
-		return nil, EIncorrectUsernameOrPassword
+		return nil, ErrIncorrectUsernameOrPassword
 	}
 
-	newPasswordHash, err := hash.GeneratePasswordHash(req.NewPassword)
+	newPasswordHash, err := hash.GeneratePasswordHash(newPassword)
 	if err != nil {
 		log.Printf("error while hashing password: %v", err)
-		return nil, hash.EHashGenPasswordHash
+		return nil, hash.ErrGenPasswordHash
 	}
 
 	password := user.Password{
@@ -126,19 +137,19 @@ func (s *AuthServer) ChangePassword(
 		Salt: newPasswordHash.Salt,
 	}
 
-	_, updateErr := s.userRepo.UpdatePassword(ctx, username, &password)
+	_, updateErr := s.userDataRepo.UpdatePassword(ctx, username, &password)
 	if updateErr != nil {
 		log.Printf("error while saving new password: %v", updateErr)
-		return nil, user.EPasswordUpdate
+		return nil, user.ErrPasswordUpdate
 	}
 
 	log.Printf("changed password for user %q", username)
 	return &authpb.ChangePasswordResponse{}, nil
 }
 
-// NewAuthServer creates a new server for the auth service.
-func NewAuthServer(userRepo user.UserRepository) *AuthServer {
-	server := &AuthServer{userRepo: userRepo}
+// NewServer creates a new server for the auth service.
+func NewServer(userDataRepo user.DataRepository) *Server {
+	server := &Server{userDataRepo: userDataRepo}
 
 	return server
 }

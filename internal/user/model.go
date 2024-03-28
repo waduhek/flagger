@@ -23,9 +23,9 @@ type User struct {
 	Password Password           `bson:"inline" json:"password"`
 }
 
-// UserRepository is an interface to the operations that can be performed on the
+// DataRepository is an interface to the operations that can be performed on the
 // users collection.
-type UserRepository interface {
+type DataRepository interface {
 	// Save saves the details of the user to the collection.
 	Save(ctx context.Context, user *User) (*mongo.InsertOneResult, error)
 

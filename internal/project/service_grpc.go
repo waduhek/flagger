@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -21,8 +22,8 @@ const projectSaveRetries uint = 5
 
 type ProjectServer struct {
 	projectpb.UnimplementedProjectServer
-	projectRepo ProjectRepository
-	userRepo    user.UserRepository
+	projectRepo  ProjectRepository
+	userDataRepo user.DataRepository
 }
 
 func (p *ProjectServer) CreateNewProject(
@@ -32,36 +33,38 @@ func (p *ProjectServer) CreateNewProject(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find claims from token")
-		return nil, auth.ENoTokenClaims
+		return nil, auth.ErrNoTokenClaims
 	}
 
 	username := jwtClaims.Subject
 
-	fetchedUser, err := p.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := p.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ECouldNotFetchUser
+		return nil, user.ErrCouldNotFetch
 	}
 
+	projectName := req.GetProjectName()
+
 	newProject := Project{
-		Name:      req.ProjectName,
+		Name:      projectName,
 		Key:       generateProjectKey(projectKeyLen),
 		CreatedBy: fetchedUser.ID,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
 
-	var projectErr error = nil
+	var projectErr error
 	for i := projectSaveRetries; i > 0; i-- {
 		_, projectErr = p.projectRepo.Save(ctx, &newProject)
 		// If the save was successful, then break out of the loop.
 		if projectErr == nil {
 			break
-		} else {
-			// If there was an error in saving the project, try again with a new
-			// project key.
-			newProject.Key = generateProjectKey(projectKeyLen)
 		}
+
+		// If there was an error in saving the project, try again with a new
+		// project key.
+		newProject.Key = generateProjectKey(projectKeyLen)
 	}
 	// If all attempts to save the project were unsuccessful, then return the
 	// error.
@@ -69,14 +72,14 @@ func (p *ProjectServer) CreateNewProject(
 		if mongo.IsDuplicateKeyError(projectErr) {
 			log.Printf(
 				"a project with name %q exists for user %q",
-				req.ProjectName,
+				projectName,
 				username,
 			)
-			return nil, EProjectNameTaken
+			return nil, ErrNameTaken
 		}
 
 		log.Printf("error while creating new project: %v", projectErr)
-		return nil, EProjectSave
+		return nil, ErrCouldNotSave
 	}
 
 	return &projectpb.CreateNewProjectResponse{}, nil
@@ -89,35 +92,37 @@ func (p *ProjectServer) GetProjectKey(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find claims from token")
-		return nil, auth.ENoTokenClaims
+		return nil, auth.ErrNoTokenClaims
 	}
 
 	username := jwtClaims.Subject
 
-	fetchedUser, err := p.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := p.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ECouldNotFetchUser
+		return nil, user.ErrCouldNotFetch
 	}
+
+	projectName := req.GetProjectName()
 
 	project, err := p.projectRepo.GetByNameAndUserID(
 		ctx,
-		req.ProjectName,
+		projectName,
 		fetchedUser.ID,
 	)
 	if err != nil {
 		log.Printf(
 			"error while fetching project %q with user %q: %v",
-			req.ProjectName,
+			projectName,
 			username,
 			err,
 		)
 
-		if err == mongo.ErrNoDocuments {
-			return nil, EProjectNotFound
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, ErrNotFound
 		}
 
-		return nil, EProjectFetch
+		return nil, ErrCouldNotFetch
 	}
 
 	response := projectpb.GetProjectKeyResponse{ProjectKey: project.Key}
@@ -128,7 +133,7 @@ func (p *ProjectServer) GetProjectKey(
 // NewProjectServer creates a new server for the project service.
 func NewProjectServer(
 	projectRepo ProjectRepository,
-	userRepo user.UserRepository,
+	userDataRepo user.DataRepository,
 ) *ProjectServer {
-	return &ProjectServer{projectRepo: projectRepo, userRepo: userRepo}
+	return &ProjectServer{projectRepo: projectRepo, userDataRepo: userDataRepo}
 }

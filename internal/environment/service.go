@@ -2,6 +2,7 @@ package environment
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -18,11 +19,11 @@ import (
 
 type EnvironmentServer struct {
 	environmentpb.UnimplementedEnvironmentServer
-	mongoClient     *mongo.Client
-	userRepo        user.UserRepository
-	projectRepo     project.ProjectRepository
-	flagSettingRepo flagsetting.FlagSettingRepository
-	environmentRepo EnvironmentRepository
+	mongoClient         *mongo.Client
+	userDataRepo        user.DataRepository
+	projectRepo         project.ProjectRepository
+	flagSettingDataRepo flagsetting.DataRepository
+	environmentRepo     EnvironmentRepository
 }
 
 func (s *EnvironmentServer) CreateEnvironment(
@@ -32,35 +33,38 @@ func (s *EnvironmentServer) CreateEnvironment(
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
 		log.Printf("could not find jwt claims in request context")
-		return nil, auth.ENoTokenClaims
+		return nil, auth.ErrNoTokenClaims
 	}
 
 	username := jwtClaims.Subject
 
-	fetchedUser, err := s.userRepo.GetByUsername(ctx, username)
+	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
 		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ECouldNotFetchUser
+		return nil, user.ErrCouldNotFetch
 	}
+
+	projectName := req.GetProjectName()
+	environmentName := req.GetEnvironmentName()
 
 	// Check if the provided project exists with the user.
 	fetchedProject, err := s.projectRepo.GetByNameAndUserID(
 		ctx,
-		req.ProjectName,
+		projectName,
 		fetchedUser.ID,
 	)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			log.Printf(
 				"no projects were found with name %q with user %q",
-				req.ProjectName,
+				projectName,
 				username,
 			)
-			return nil, project.EProjectNotFound
+			return nil, project.ErrNotFound
 		}
 
 		log.Printf("error occurred while fetching projects: %v", err)
-		return nil, project.EProjectFetch
+		return nil, project.ErrCouldNotFetch
 	}
 
 	// Create a session that will initiate a transaction to save the details of
@@ -68,7 +72,7 @@ func (s *EnvironmentServer) CreateEnvironment(
 	session, err := s.mongoClient.StartSession()
 	if err != nil {
 		log.Printf("could not create a new session: %v", err)
-		return nil, EEnvironmentTxn
+		return nil, ErrTxnSession
 	}
 
 	// Start the transaction to save the environment.
@@ -86,8 +90,8 @@ func (s *EnvironmentServer) CreateEnvironment(
 
 	log.Printf(
 		"successfully created environment %q for project %q",
-		req.EnvironmentName,
-		req.ProjectName,
+		environmentName,
+		projectName,
 	)
 	return &environmentpb.CreateEnvironmentResponse{}, nil
 }
@@ -100,38 +104,40 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 	fetchedProject *project.Project,
 ) func(mongo.SessionContext) (interface{}, error) {
 	return func(ctx mongo.SessionContext) (interface{}, error) {
+		environmentName := req.GetEnvironmentName()
+
 		// Create a new environment.
 		newEnvironment := Environment{
-			Name:      req.EnvironmentName,
+			Name:      environmentName,
 			ProjectID: fetchedProject.ID,
 			CreatedBy: user.ID,
 			CreatedAt: time.Now(),
 		}
 
-		envResult, err := s.environmentRepo.Save(ctx, &newEnvironment)
-		if err != nil {
-			if mongo.IsDuplicateKeyError(err) {
+		envResult, envSaveErr := s.environmentRepo.Save(ctx, &newEnvironment)
+		if envSaveErr != nil {
+			if mongo.IsDuplicateKeyError(envSaveErr) {
 				log.Printf(
 					"an environment %q already exists for project %q",
-					req.EnvironmentName,
+					environmentName,
 					fetchedProject.Name,
 				)
-				return nil, EEnvironmentNameTaken
+				return nil, ErrNameTaken
 			}
 
 			log.Printf(
 				"could not create environment %q for project %q",
-				req.EnvironmentName,
+				environmentName,
 				fetchedProject.ID,
 			)
-			return nil, EEnvironmentSave
+			return nil, ErrCouldNotSave
 		}
 
 		// Cast the returned ID of the inserted environment as an ObjectID.
 		environmentID, ok := envResult.InsertedID.(primitive.ObjectID)
 		if !ok {
 			log.Printf("environment ID is not of type ObjectID")
-			return nil, EEnvironmentIDCast
+			return nil, ErrEnvironmentIDCast
 		}
 
 		// Create new flag settings for all the flags that are present in the
@@ -152,13 +158,13 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 
 		// Save the flag settings to the collection.
 		if len(flagSettings) > 0 {
-			insertedFlagSettings, err := s.flagSettingRepo.SaveMany(
+			insertedFlagSettings, flagSettingSaveErr := s.flagSettingDataRepo.SaveMany(
 				ctx,
 				flagSettings,
 			)
-			if err != nil {
-				log.Printf("error while saving flag settings: %v", err)
-				return nil, flagsetting.EFlagSettingSave
+			if flagSettingSaveErr != nil {
+				log.Printf("error while saving flag settings: %v", flagSettingSaveErr)
+				return nil, flagsetting.ErrCouldNotSave
 			}
 
 			// Cast the IDs of all the flag settings as ObjectIDs.
@@ -181,7 +187,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 					"error while updating project with flag settings: %v",
 					projectFlagSettingErr,
 				)
-				return nil, project.EProjectAddFlagSetting
+				return nil, project.ErrAddFlagSetting
 			}
 		}
 
@@ -198,7 +204,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 				fetchedProject.ID,
 				projectUpdateErr,
 			)
-			return nil, project.EProjectAddEnvironment
+			return nil, project.ErrAddEnvironment
 		}
 
 		return nil, nil
@@ -207,16 +213,16 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 
 func NewEnvironmentServer(
 	client *mongo.Client,
-	userRepo user.UserRepository,
+	userDataRepo user.DataRepository,
 	projectRepo project.ProjectRepository,
-	flagSettingRepo flagsetting.FlagSettingRepository,
+	flagSettingDataRepo flagsetting.DataRepository,
 	environmentRepo EnvironmentRepository,
 ) *EnvironmentServer {
 	return &EnvironmentServer{
-		mongoClient:     client,
-		userRepo:        userRepo,
-		projectRepo:     projectRepo,
-		flagSettingRepo: flagSettingRepo,
-		environmentRepo: environmentRepo,
+		mongoClient:         client,
+		userDataRepo:        userDataRepo,
+		projectRepo:         projectRepo,
+		flagSettingDataRepo: flagSettingDataRepo,
+		environmentRepo:     environmentRepo,
 	}
 }

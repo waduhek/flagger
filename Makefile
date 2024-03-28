@@ -6,9 +6,9 @@ proto:
 		proto/**/*.proto
 
 # Lint the code
-.PHONY: vet
-vet:
-	go vet ./...
+.PHONY: lint
+lint:
+	docker run --rm -v $$(pwd):/app -w /app golangci/golangci-lint golangci-lint run
 
 # Run gofmt
 .PHONY: format

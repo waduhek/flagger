@@ -15,13 +15,13 @@ func TestGeneratePasswordHash(t *testing.T) {
 			subT.Errorf("error while hashing %q: %v", password, err)
 		}
 
-		if len(got.Hash) <= 0 {
+		if len(got.Hash) == 0 {
 			subT.Errorf(
 				"hash length of %q is less than or equal to 0",
 				password,
 			)
 		}
-		if len(got.Salt) <= 0 {
+		if len(got.Salt) == 0 {
 			subT.Errorf(
 				"salt length of %q is less than or equal to 0",
 				password,
@@ -37,19 +37,18 @@ func TestGeneratePasswordHash(t *testing.T) {
 			subT.Errorf("error while hashing %q: %v", password, err)
 		}
 
-		if len(got.Hash) <= 0 {
+		if len(got.Hash) == 0 {
 			subT.Errorf(
 				"hash length of %q is less than or equal to 0",
 				password,
 			)
 		}
-		if len(got.Salt) <= 0 {
+		if len(got.Salt) == 0 {
 			subT.Errorf(
 				"salt length of %q is less than or equal to 0",
 				password,
 			)
 		}
-
 	})
 }
 

@@ -12,19 +12,19 @@ type PasswordHashDetails struct {
 	Salt []byte
 }
 
-// The number of bytes for the salt
+// The number of bytes for the salt.
 const saltLength uint16 = 16
 
-// The time parameter for the hashing algorithm
+// The time parameter for the hashing algorithm.
 const hashTime uint32 = 1
 
-// The memory to allocate for the hashing algorithm
+// The memory to allocate for the hashing algorithm.
 const memory uint32 = 64 * 1024
 
-// The number of threads for the hashing algorithm
+// The number of threads for the hashing algorithm.
 const threads uint8 = 4
 
-// The key length of the generated hash
+// The key length of the generated hash.
 const keyLen uint32 = 64
 
 // generateRandomSalt generates a random salt of a set byte size for password
@@ -50,7 +50,7 @@ func GeneratePasswordHash(password string) (PasswordHashDetails, error) {
 
 	passwordHash := argon2.IDKey(
 		[]byte(password),
-		[]byte(salt),
+		salt,
 		hashTime,
 		memory,
 		threads,
