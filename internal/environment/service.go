@@ -19,11 +19,11 @@ import (
 
 type EnvironmentServer struct {
 	environmentpb.UnimplementedEnvironmentServer
-	mongoClient     *mongo.Client
-	userDataRepo    user.DataRepository
-	projectRepo     project.ProjectRepository
-	flagSettingRepo flagsetting.FlagSettingRepository
-	environmentRepo EnvironmentRepository
+	mongoClient         *mongo.Client
+	userDataRepo        user.DataRepository
+	projectRepo         project.ProjectRepository
+	flagSettingDataRepo flagsetting.DataRepository
+	environmentRepo     EnvironmentRepository
 }
 
 func (s *EnvironmentServer) CreateEnvironment(
@@ -158,7 +158,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 
 		// Save the flag settings to the collection.
 		if len(flagSettings) > 0 {
-			insertedFlagSettings, flagSettingSaveErr := s.flagSettingRepo.SaveMany(
+			insertedFlagSettings, flagSettingSaveErr := s.flagSettingDataRepo.SaveMany(
 				ctx,
 				flagSettings,
 			)
@@ -215,14 +215,14 @@ func NewEnvironmentServer(
 	client *mongo.Client,
 	userDataRepo user.DataRepository,
 	projectRepo project.ProjectRepository,
-	flagSettingRepo flagsetting.FlagSettingRepository,
+	flagSettingDataRepo flagsetting.DataRepository,
 	environmentRepo EnvironmentRepository,
 ) *EnvironmentServer {
 	return &EnvironmentServer{
-		mongoClient:     client,
-		userDataRepo:    userDataRepo,
-		projectRepo:     projectRepo,
-		flagSettingRepo: flagSettingRepo,
-		environmentRepo: environmentRepo,
+		mongoClient:         client,
+		userDataRepo:        userDataRepo,
+		projectRepo:         projectRepo,
+		flagSettingDataRepo: flagSettingDataRepo,
+		environmentRepo:     environmentRepo,
 	}
 }

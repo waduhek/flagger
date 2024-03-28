@@ -11,18 +11,18 @@ import (
 
 const flagSettingCollection string = "flag_settings"
 
-type flagSettingRepository struct {
+type MongoDataRepository struct {
 	coll *mongo.Collection
 }
 
-func (r *flagSettingRepository) Save(
+func (r *MongoDataRepository) Save(
 	ctx context.Context,
 	flagSetting *FlagSetting,
 ) (*mongo.InsertOneResult, error) {
 	return r.coll.InsertOne(ctx, flagSetting)
 }
 
-func (r *flagSettingRepository) SaveMany(
+func (r *MongoDataRepository) SaveMany(
 	ctx context.Context,
 	flagSettings []FlagSetting,
 ) (*mongo.InsertManyResult, error) {
@@ -34,7 +34,7 @@ func (r *flagSettingRepository) SaveMany(
 	return r.coll.InsertMany(ctx, toInsert)
 }
 
-func (r *flagSettingRepository) Get(
+func (r *MongoDataRepository) Get(
 	ctx context.Context,
 	projectID primitive.ObjectID,
 	environmentID primitive.ObjectID,
@@ -56,7 +56,7 @@ func (r *flagSettingRepository) Get(
 	return &flagSetting, err
 }
 
-func (r *flagSettingRepository) UpdateIsActive(
+func (r *MongoDataRepository) UpdateIsActive(
 	ctx context.Context,
 	projectID primitive.ObjectID,
 	environmentID primitive.ObjectID,
@@ -96,7 +96,7 @@ func setupIndexes(ctx context.Context, coll *mongo.Collection) error {
 func NewFlagSettingRepository(
 	ctx context.Context,
 	db *mongo.Database,
-) (*flagSettingRepository, error) {
+) (*MongoDataRepository, error) {
 	coll := db.Collection(flagSettingCollection)
 
 	err := setupIndexes(ctx, coll)
@@ -104,5 +104,5 @@ func NewFlagSettingRepository(
 		return nil, err
 	}
 
-	return &flagSettingRepository{coll}, nil
+	return &MongoDataRepository{coll}, nil
 }

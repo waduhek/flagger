@@ -20,12 +20,12 @@ import (
 
 type FlagServer struct {
 	flagpb.UnimplementedFlagServer
-	mongoClient     *mongo.Client
-	userDataRepo    user.DataRepository
-	projectRepo     project.ProjectRepository
-	environmentRepo environment.EnvironmentRepository
-	flagRepo        FlagRepository
-	flagSettingRepo flagsetting.FlagSettingRepository
+	mongoClient         *mongo.Client
+	userDataRepo        user.DataRepository
+	projectRepo         project.ProjectRepository
+	environmentRepo     environment.EnvironmentRepository
+	flagRepo            FlagRepository
+	flagSettingDataRepo flagsetting.DataRepository
 }
 
 type mongoTxnCallback func(ctx mongo.SessionContext) (interface{}, error)
@@ -160,7 +160,7 @@ func (s *FlagServer) handleCreateFlag(
 			flagSettings = append(flagSettings, setting)
 		}
 
-		flagSettingSaveResult, err := s.flagSettingRepo.SaveMany(
+		flagSettingSaveResult, err := s.flagSettingDataRepo.SaveMany(
 			ctx,
 			flagSettings,
 		)
@@ -287,7 +287,7 @@ func (s *FlagServer) UpdateFlagStatus(
 	}
 
 	// Update the flag setting to the desired value.
-	updateResult, err := s.flagSettingRepo.UpdateIsActive(
+	updateResult, err := s.flagSettingDataRepo.UpdateIsActive(
 		ctx,
 		fetchedProject.ID,
 		fetchedEnvironment.ID,
@@ -321,14 +321,14 @@ func NewFlagServer(
 	projectRepo project.ProjectRepository,
 	environmentRepo environment.EnvironmentRepository,
 	flagRepo FlagRepository,
-	flagSettingRepo flagsetting.FlagSettingRepository,
+	flagSettingDataRepo flagsetting.DataRepository,
 ) *FlagServer {
 	return &FlagServer{
-		mongoClient:     mongoClient,
-		userDataRepo:    userDataRepo,
-		projectRepo:     projectRepo,
-		environmentRepo: environmentRepo,
-		flagRepo:        flagRepo,
-		flagSettingRepo: flagSettingRepo,
+		mongoClient:         mongoClient,
+		userDataRepo:        userDataRepo,
+		projectRepo:         projectRepo,
+		environmentRepo:     environmentRepo,
+		flagRepo:            flagRepo,
+		flagSettingDataRepo: flagSettingDataRepo,
 	}
 }

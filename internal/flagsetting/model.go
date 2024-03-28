@@ -18,7 +18,7 @@ type FlagSetting struct {
 	UpdatedAt     time.Time          `bson:"updated_at"`
 }
 
-type FlagSettingRepository interface {
+type DataRepository interface {
 	// Save creates a new `FlagSetting`.
 	Save(
 		ctx context.Context,
