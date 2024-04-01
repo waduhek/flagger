@@ -17,16 +17,16 @@ import (
 	"github.com/waduhek/flagger/internal/user"
 )
 
-type EnvironmentServer struct {
+type Server struct {
 	environmentpb.UnimplementedEnvironmentServer
 	mongoClient         *mongo.Client
 	userDataRepo        user.DataRepository
 	projectDataRepo     project.DataRepository
 	flagSettingDataRepo flagsetting.DataRepository
-	environmentRepo     EnvironmentRepository
+	environmentDataRepo DataRepository
 }
 
-func (s *EnvironmentServer) CreateEnvironment(
+func (s *Server) CreateEnvironment(
 	ctx context.Context,
 	req *environmentpb.CreateEnvironmentRequest,
 ) (*environmentpb.CreateEnvironmentResponse, error) {
@@ -98,7 +98,7 @@ func (s *EnvironmentServer) CreateEnvironment(
 
 // handleCreateEnvrionment performs the transaction for creating the
 // environment.
-func (s *EnvironmentServer) handleCreateEnvrionment(
+func (s *Server) handleCreateEnvrionment(
 	req *environmentpb.CreateEnvironmentRequest,
 	user *user.User,
 	fetchedProject *project.Project,
@@ -114,7 +114,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 			CreatedAt: time.Now(),
 		}
 
-		envResult, envSaveErr := s.environmentRepo.Save(ctx, &newEnvironment)
+		envResult, envSaveErr := s.environmentDataRepo.Save(ctx, &newEnvironment)
 		if envSaveErr != nil {
 			if mongo.IsDuplicateKeyError(envSaveErr) {
 				log.Printf(
@@ -216,13 +216,13 @@ func NewEnvironmentServer(
 	userDataRepo user.DataRepository,
 	projectDataRepo project.DataRepository,
 	flagSettingDataRepo flagsetting.DataRepository,
-	environmentRepo EnvironmentRepository,
-) *EnvironmentServer {
-	return &EnvironmentServer{
+	environmentDataRepo DataRepository,
+) *Server {
+	return &Server{
 		mongoClient:         client,
 		userDataRepo:        userDataRepo,
 		projectDataRepo:     projectDataRepo,
 		flagSettingDataRepo: flagSettingDataRepo,
-		environmentRepo:     environmentRepo,
+		environmentDataRepo: environmentDataRepo,
 	}
 }

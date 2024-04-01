@@ -23,7 +23,7 @@ type FlagServer struct {
 	mongoClient         *mongo.Client
 	userDataRepo        user.DataRepository
 	projectDataRepo     project.DataRepository
-	environmentRepo     environment.EnvironmentRepository
+	environmentDataRepo environment.DataRepository
 	flagRepo            FlagRepository
 	flagSettingDataRepo flagsetting.DataRepository
 }
@@ -251,7 +251,7 @@ func (s *FlagServer) UpdateFlagStatus(
 	}
 
 	// Get the environment that is to be updated.
-	fetchedEnvironment, err := s.environmentRepo.GetByNameAndProjectID(
+	fetchedEnvironment, err := s.environmentDataRepo.GetByNameAndProjectID(
 		ctx,
 		environmentName,
 		fetchedProject.ID,
@@ -319,7 +319,7 @@ func NewFlagServer(
 	mongoClient *mongo.Client,
 	userDataRepo user.DataRepository,
 	projectDataRepo project.DataRepository,
-	environmentRepo environment.EnvironmentRepository,
+	environmentDataRepo environment.DataRepository,
 	flagRepo FlagRepository,
 	flagSettingDataRepo flagsetting.DataRepository,
 ) *FlagServer {
@@ -327,7 +327,7 @@ func NewFlagServer(
 		mongoClient:         mongoClient,
 		userDataRepo:        userDataRepo,
 		projectDataRepo:     projectDataRepo,
-		environmentRepo:     environmentRepo,
+		environmentDataRepo: environmentDataRepo,
 		flagRepo:            flagRepo,
 		flagSettingDataRepo: flagSettingDataRepo,
 	}

@@ -11,18 +11,18 @@ import (
 
 const environmentCollection string = "environments"
 
-type environmentRepository struct {
+type MongoDataRepository struct {
 	coll *mongo.Collection
 }
 
-func (r *environmentRepository) Save(
+func (r *MongoDataRepository) Save(
 	ctx context.Context,
 	environment *Environment,
 ) (*mongo.InsertOneResult, error) {
 	return r.coll.InsertOne(ctx, environment)
 }
 
-func (r *environmentRepository) GetByID(
+func (r *MongoDataRepository) GetByID(
 	ctx context.Context,
 	id primitive.ObjectID,
 ) (*Environment, error) {
@@ -38,7 +38,7 @@ func (r *environmentRepository) GetByID(
 	return &environment, nil
 }
 
-func (r *environmentRepository) GetByNameAndProjectID(
+func (r *MongoDataRepository) GetByNameAndProjectID(
 	ctx context.Context,
 	environmentName string,
 	projectID primitive.ObjectID,
@@ -78,7 +78,7 @@ func setupCollIndexes(
 func NewEnvironmentRepository(
 	ctx context.Context,
 	db *mongo.Database,
-) (*environmentRepository, error) {
+) (*MongoDataRepository, error) {
 	coll := db.Collection(environmentCollection)
 
 	err := setupCollIndexes(ctx, coll)
@@ -86,5 +86,5 @@ func NewEnvironmentRepository(
 		return nil, err
 	}
 
-	return &environmentRepository{coll}, nil
+	return &MongoDataRepository{coll}, nil
 }

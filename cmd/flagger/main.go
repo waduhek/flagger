@@ -71,7 +71,7 @@ func initProjectServer(db *mongo.Database) *project.Server {
 func initEnvironmentServer(
 	client *mongo.Client,
 	db *mongo.Database,
-) *environment.EnvironmentServer {
+) *environment.Server {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
