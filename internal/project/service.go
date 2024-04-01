@@ -16,6 +16,7 @@ func generateProjectKey(n uint) string {
 	b := make([]byte, n)
 
 	for i := range b {
+		//nolint:gosec // TODO: Think about how to generate a more unique key.
 		b[i] = letters[rand.Intn(lettersLen)]
 	}
 
@@ -31,9 +32,9 @@ func injectProjectKeyIntoContext(
 	return context.WithValue(ctx, projectKey{}, token)
 }
 
-// ProjectKeyFromContext returns the project key from the provided context if it
-// is available.
-func ProjectKeyFromContext(ctx context.Context) (string, bool) {
+// KeyFromContext returns the project key from the provided context if it is
+// available.
+func KeyFromContext(ctx context.Context) (string, bool) {
 	token, ok := ctx.Value(projectKey{}).(string)
 	if !ok {
 		return "", false

@@ -9,9 +9,9 @@ import (
 	"github.com/waduhek/flagger/proto/authpb"
 )
 
-// AuthServerUnaryInterceptor intercepts the requests coming to the
+// UnaryServerInterceptor intercepts the requests coming to the
 // authentication service.
-func AuthServerUnaryInterceptor(
+func UnaryServerInterceptor(
 	ctx context.Context,
 	req any,
 	info *grpc.UnaryServerInfo,
@@ -37,7 +37,7 @@ func AuthoriseRequestInterceptor(serverPath string) grpc.UnaryServerInterceptor 
 		req any,
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
-	) (resp any, err error) {
+	) (any, error) {
 		if !strings.HasPrefix(info.FullMethod, serverPath) {
 			return handler(ctx, req)
 		}

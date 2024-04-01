@@ -9,11 +9,11 @@ import (
 	"github.com/waduhek/flagger/internal/project"
 )
 
-type providerRepository struct {
+type MongoDataRepository struct {
 	projectColl *mongo.Collection
 }
 
-func (r *providerRepository) GetFlagDetailsByProjectKey(
+func (r *MongoDataRepository) GetFlagDetailsByProjectKey(
 	ctx context.Context,
 	projectKey string,
 	environmentName string,
@@ -160,8 +160,8 @@ func (r *providerRepository) GetFlagDetailsByProjectKey(
 	return results, nil
 }
 
-func NewProviderRepository(db *mongo.Database) *providerRepository {
+func NewProviderRepository(db *mongo.Database) *MongoDataRepository {
 	projectColl := db.Collection(project.ProjectCollection)
 
-	return &providerRepository{projectColl: projectColl}
+	return &MongoDataRepository{projectColl: projectColl}
 }

@@ -9,14 +9,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// The TTL in seconds of the keys stored in the Redis cache.
-var cacheTTLSeconds, _ = time.ParseDuration(os.Getenv("FLAGGER_CACHE_TTL"))
-
-type providerCacheRepository struct {
+type RedisCacheRepository struct {
 	rdb *redis.Client
 }
 
-func (r *providerCacheRepository) IsFlagStatusCached(
+func (r *RedisCacheRepository) IsFlagStatusCached(
 	ctx context.Context,
 	params *cacheParameters,
 ) (bool, error) {
@@ -30,7 +27,7 @@ func (r *providerCacheRepository) IsFlagStatusCached(
 	return result >= 1, nil
 }
 
-func (r *providerCacheRepository) GetFlagStatus(
+func (r *RedisCacheRepository) GetFlagStatus(
 	ctx context.Context,
 	params *cacheParameters,
 ) (bool, error) {
@@ -39,18 +36,21 @@ func (r *providerCacheRepository) GetFlagStatus(
 	return r.rdb.Get(ctx, cacheKey).Bool()
 }
 
-func (r *providerCacheRepository) CacheFlagStatus(
+func (r *RedisCacheRepository) CacheFlagStatus(
 	ctx context.Context,
 	params *cacheParameters,
 	status bool,
 ) error {
+	// The TTL in seconds of the keys stored in the Redis cache.
+	cacheTTL, _ := time.ParseDuration(os.Getenv("FLAGGER_CACHE_TTL"))
+
 	cacheKey := genFlagStatusCacheKey(params)
 
 	return r.rdb.SetEx(
 		ctx,
 		cacheKey,
 		status,
-		time.Duration(cacheTTLSeconds),
+		cacheTTL,
 	).Err()
 }
 
@@ -65,8 +65,8 @@ func genFlagStatusCacheKey(params *cacheParameters) string {
 	)
 }
 
-func NewProviderCacheRepository(rdb *redis.Client) *providerCacheRepository {
-	return &providerCacheRepository{
+func NewProviderCacheRepository(rdb *redis.Client) *RedisCacheRepository {
+	return &RedisCacheRepository{
 		rdb: rdb,
 	}
 }

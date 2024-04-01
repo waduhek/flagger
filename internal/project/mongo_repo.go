@@ -12,18 +12,18 @@ import (
 
 const ProjectCollection string = "projects"
 
-type projectRepository struct {
+type MongoDataRepository struct {
 	coll *mongo.Collection
 }
 
-func (p *projectRepository) Save(
+func (p *MongoDataRepository) Save(
 	ctx context.Context,
 	project *Project,
 ) (*mongo.InsertOneResult, error) {
 	return p.coll.InsertOne(ctx, project)
 }
 
-func (p *projectRepository) GetByNameAndUserID(
+func (p *MongoDataRepository) GetByNameAndUserID(
 	ctx context.Context,
 	projectName string,
 	userID primitive.ObjectID,
@@ -39,7 +39,7 @@ func (p *projectRepository) GetByNameAndUserID(
 	return &project, err
 }
 
-func (p *projectRepository) AddEnvironment(
+func (p *MongoDataRepository) AddEnvironment(
 	ctx context.Context,
 	projectID primitive.ObjectID,
 	environmentID primitive.ObjectID,
@@ -61,7 +61,7 @@ func (p *projectRepository) AddEnvironment(
 	return p.coll.UpdateOne(ctx, filterQuery, updateQuery)
 }
 
-func (p *projectRepository) AddFlag(
+func (p *MongoDataRepository) AddFlag(
 	ctx context.Context,
 	projectID primitive.ObjectID,
 	flagID primitive.ObjectID,
@@ -81,7 +81,7 @@ func (p *projectRepository) AddFlag(
 	return p.coll.UpdateOne(ctx, filterQuery, updateQuery)
 }
 
-func (p *projectRepository) AddFlagSettings(
+func (p *MongoDataRepository) AddFlagSettings(
 	ctx context.Context,
 	projectID primitive.ObjectID,
 	flagSettingIDs ...primitive.ObjectID,
@@ -138,7 +138,7 @@ func setupProjectCollIndexes(
 func NewProjectRepository(
 	ctx context.Context,
 	db *mongo.Database,
-) (*projectRepository, error) {
+) (*MongoDataRepository, error) {
 	coll := db.Collection(ProjectCollection)
 
 	err := setupProjectCollIndexes(ctx, coll)
@@ -146,5 +146,5 @@ func NewProjectRepository(
 		return nil, err
 	}
 
-	return &projectRepository{coll}, nil
+	return &MongoDataRepository{coll}, nil
 }

@@ -9,9 +9,9 @@ type cacheParameters struct {
 	FlagName        string
 }
 
-// ProviderCacheRepository provides the interface for acessing the cache for
-// storing flag statuses.
-type ProviderCacheRepository interface {
+// CacheRepository provides the interface for acessing the cache for storing
+// flag statuses.
+type CacheRepository interface {
 	// IsStatusCached checks if the flag status is already cached
 	IsFlagStatusCached(
 		ctx context.Context,

@@ -16,7 +16,7 @@ type Environment struct {
 	CreatedAt time.Time          `bson:"created_at"`
 }
 
-type EnvironmentRepository interface {
+type DataRepository interface {
 	// Creates a new `Environment` document.
 	Save(
 		ctx context.Context,

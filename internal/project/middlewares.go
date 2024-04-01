@@ -9,6 +9,8 @@ import (
 
 // projectTokenMetadataKey is the metadata key for the incoming request
 // metadata to find the project token.
+//
+//nolint:gosec // This isn't a secret but a header key.
 const projectTokenMetadataKey = "x-flagger-token"
 
 // AuthoriseProject takes an incoming GRPC context and checks if the project
@@ -19,18 +21,18 @@ func AuthoriseProject(ctx context.Context) (context.Context, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		log.Println("could not find message metadata")
-		return nil, EMetadataNotFound
+		return nil, ErrMetadataNotFound
 	}
 
 	projectTokens, ok := md[projectTokenMetadataKey]
 	if !ok {
 		log.Println("could not find the project token")
-		return nil, EProjectKeyNotFound
+		return nil, ErrProjectKeyNotFound
 	}
 
 	if len(projectTokens) != 1 {
 		log.Println("multiple project tokens found in metadata")
-		return nil, EKeyMetadataLength
+		return nil, ErrKeyMetadataLength
 	}
 
 	projectToken := projectTokens[0]

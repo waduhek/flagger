@@ -25,7 +25,7 @@ type FlagDetails struct {
 	UpdatedAt   time.Time               `bson:"updated_at"`
 }
 
-type ProviderRepository interface {
+type DataRepository interface {
 	// GetFlagDetailsByProjectKey gets the details of a flag by the project key,
 	// environment name and the flag name.
 	GetFlagDetailsByProjectKey(

@@ -35,14 +35,7 @@ import (
 	"github.com/waduhek/flagger/internal/user"
 )
 
-var mongoConnectionString string = os.Getenv("FLAGGER_MONGO_URI")
-var redisConnectionString string = os.Getenv("FLAGGER_REDIS_URI")
-
-var flaggerDB string = os.Getenv("FLAGGER_DB")
-
-var serverPort, _ = strconv.ParseUint(os.Getenv("FLAGGER_PORT"), 10, 16)
-
-func initAuthServer(db *mongo.Database) *auth.AuthServer {
+func initAuthServer(db *mongo.Database) *auth.Server {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -52,12 +45,12 @@ func initAuthServer(db *mongo.Database) *auth.AuthServer {
 		log.Panicf("could not initialise user repository: %v", err)
 	}
 
-	authServer := auth.NewAuthServer(userRepo)
+	authServer := auth.NewServer(userRepo)
 
 	return authServer
 }
 
-func initProjectServer(db *mongo.Database) *project.ProjectServer {
+func initProjectServer(db *mongo.Database) *project.Server {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -78,7 +71,7 @@ func initProjectServer(db *mongo.Database) *project.ProjectServer {
 func initEnvironmentServer(
 	client *mongo.Client,
 	db *mongo.Database,
-) *environment.EnvironmentServer {
+) *environment.Server {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -112,7 +105,7 @@ func initEnvironmentServer(
 	)
 }
 
-func initFlagServer(client *mongo.Client, db *mongo.Database) *flag.FlagServer {
+func initFlagServer(client *mongo.Client, db *mongo.Database) *flag.Server {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -163,11 +156,13 @@ func initFlagProviderServer(
 }
 
 func connectMongo() *mongo.Client {
-	serverApi := options.ServerAPI(options.ServerAPIVersion1)
+	mongoConnectionString := os.Getenv("FLAGGER_MONGO_URI")
+
+	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.
 		Client().
 		ApplyURI(mongoConnectionString).
-		SetServerAPIOptions(serverApi)
+		SetServerAPIOptions(serverAPI)
 
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
@@ -192,6 +187,8 @@ func connectMongo() *mongo.Client {
 }
 
 func connectRedis() *redis.Client {
+	redisConnectionString := os.Getenv("FLAGGER_REDIS_URI")
+
 	opt, err := redis.ParseURL(redisConnectionString)
 	if err != nil {
 		log.Panicf("could not parse redis connection string: %v", err)
@@ -226,9 +223,12 @@ func gracefulShutdown(cleanup func()) {
 }
 
 func main() {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", serverPort))
-	if err != nil {
-		log.Panicf("could not listen on port %d: %v", serverPort, err)
+	flaggerDB := os.Getenv("FLAGGER_DB")
+	serverPort, _ := strconv.ParseUint(os.Getenv("FLAGGER_PORT"), 10, 16)
+
+	lis, lisErr := net.Listen("tcp", fmt.Sprintf(":%d", serverPort))
+	if lisErr != nil {
+		log.Panicf("could not listen on port %d: %v", serverPort, lisErr)
 	}
 
 	mongoClient := connectMongo()
@@ -245,13 +245,13 @@ func main() {
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			auth.AuthServerUnaryInterceptor,
+			auth.UnaryServerInterceptor,
 			auth.AuthoriseRequestInterceptor("/projectpb.Project/"),
 			auth.AuthoriseRequestInterceptor(
 				"/environmentpb.Environment/",
 			),
 			auth.AuthoriseRequestInterceptor("/flagpb.Flag/"),
-			project.ProjectKeyUnaryInterceptor("/providerpb.FlagProvider/"),
+			project.KeyUnaryInterceptor("/providerpb.FlagProvider/"),
 		),
 	)
 	// Registering servers
@@ -267,15 +267,15 @@ func main() {
 	gracefulShutdown(func() {
 		ctx := context.Background()
 
-		if err := mongoClient.Disconnect(ctx); err != nil {
-			log.Panicf("could not disconnect from mongodb: %v", err)
+		if disconnectErr := mongoClient.Disconnect(ctx); disconnectErr != nil {
+			log.Panicf("could not disconnect from mongodb: %v", disconnectErr)
 		}
 
 		grpcServer.GracefulStop()
 	})
 
 	log.Printf("flagger server listening at %q", lis.Addr().String())
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("could not serve: %v", err)
+	if serveErr := grpcServer.Serve(lis); serveErr != nil {
+		log.Fatalf("could not serve: %v", serveErr)
 	}
 }

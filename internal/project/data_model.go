@@ -20,9 +20,9 @@ type Project struct {
 	UpdatedAt    time.Time            `bson:"updated_at"`
 }
 
-// ProjectRepository is an interface to the operations that can be performed on
+// DataRepository is an interface to the operations that can be performed on
 // the projects collection.
-type ProjectRepository interface {
+type DataRepository interface {
 	// Creates a new `Project` document
 	Save(ctx context.Context, project *Project) (*mongo.InsertOneResult, error)
 
