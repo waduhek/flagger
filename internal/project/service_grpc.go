@@ -20,13 +20,13 @@ const projectKeyLen uint = 32
 // The number of retries for saving the project before an error is returned.
 const projectSaveRetries uint = 5
 
-type ProjectServer struct {
+type Server struct {
 	projectpb.UnimplementedProjectServer
-	projectRepo  ProjectRepository
-	userDataRepo user.DataRepository
+	projectDataRepo DataRepository
+	userDataRepo    user.DataRepository
 }
 
-func (p *ProjectServer) CreateNewProject(
+func (p *Server) CreateNewProject(
 	ctx context.Context,
 	req *projectpb.CreateNewProjectRequest,
 ) (*projectpb.CreateNewProjectResponse, error) {
@@ -56,7 +56,7 @@ func (p *ProjectServer) CreateNewProject(
 
 	var projectErr error
 	for i := projectSaveRetries; i > 0; i-- {
-		_, projectErr = p.projectRepo.Save(ctx, &newProject)
+		_, projectErr = p.projectDataRepo.Save(ctx, &newProject)
 		// If the save was successful, then break out of the loop.
 		if projectErr == nil {
 			break
@@ -85,7 +85,7 @@ func (p *ProjectServer) CreateNewProject(
 	return &projectpb.CreateNewProjectResponse{}, nil
 }
 
-func (p *ProjectServer) GetProjectKey(
+func (p *Server) GetProjectKey(
 	ctx context.Context,
 	req *projectpb.GetProjectKeyRequest,
 ) (*projectpb.GetProjectKeyResponse, error) {
@@ -105,7 +105,7 @@ func (p *ProjectServer) GetProjectKey(
 
 	projectName := req.GetProjectName()
 
-	project, err := p.projectRepo.GetByNameAndUserID(
+	project, err := p.projectDataRepo.GetByNameAndUserID(
 		ctx,
 		projectName,
 		fetchedUser.ID,
@@ -132,8 +132,8 @@ func (p *ProjectServer) GetProjectKey(
 
 // NewProjectServer creates a new server for the project service.
 func NewProjectServer(
-	projectRepo ProjectRepository,
+	projectDataRepo DataRepository,
 	userDataRepo user.DataRepository,
-) *ProjectServer {
-	return &ProjectServer{projectRepo: projectRepo, userDataRepo: userDataRepo}
+) *Server {
+	return &Server{projectDataRepo: projectDataRepo, userDataRepo: userDataRepo}
 }

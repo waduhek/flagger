@@ -50,7 +50,7 @@ func initAuthServer(db *mongo.Database) *auth.Server {
 	return authServer
 }
 
-func initProjectServer(db *mongo.Database) *project.ProjectServer {
+func initProjectServer(db *mongo.Database) *project.Server {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -251,7 +251,7 @@ func main() {
 				"/environmentpb.Environment/",
 			),
 			auth.AuthoriseRequestInterceptor("/flagpb.Flag/"),
-			project.ProjectKeyUnaryInterceptor("/providerpb.FlagProvider/"),
+			project.KeyUnaryInterceptor("/providerpb.FlagProvider/"),
 		),
 	)
 	// Registering servers

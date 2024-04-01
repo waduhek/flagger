@@ -21,7 +21,7 @@ type EnvironmentServer struct {
 	environmentpb.UnimplementedEnvironmentServer
 	mongoClient         *mongo.Client
 	userDataRepo        user.DataRepository
-	projectRepo         project.ProjectRepository
+	projectDataRepo     project.DataRepository
 	flagSettingDataRepo flagsetting.DataRepository
 	environmentRepo     EnvironmentRepository
 }
@@ -48,7 +48,7 @@ func (s *EnvironmentServer) CreateEnvironment(
 	environmentName := req.GetEnvironmentName()
 
 	// Check if the provided project exists with the user.
-	fetchedProject, err := s.projectRepo.GetByNameAndUserID(
+	fetchedProject, err := s.projectDataRepo.GetByNameAndUserID(
 		ctx,
 		projectName,
 		fetchedUser.ID,
@@ -177,7 +177,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 			}
 
 			// Update the project with the new flag settings.
-			_, projectFlagSettingErr := s.projectRepo.AddFlagSettings(
+			_, projectFlagSettingErr := s.projectDataRepo.AddFlagSettings(
 				ctx,
 				fetchedProject.ID,
 				insertedFlagSettingIDs...,
@@ -192,7 +192,7 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 		}
 
 		// Add the environment to the project.
-		_, projectUpdateErr := s.projectRepo.AddEnvironment(
+		_, projectUpdateErr := s.projectDataRepo.AddEnvironment(
 			ctx,
 			fetchedProject.ID,
 			environmentID,
@@ -214,14 +214,14 @@ func (s *EnvironmentServer) handleCreateEnvrionment(
 func NewEnvironmentServer(
 	client *mongo.Client,
 	userDataRepo user.DataRepository,
-	projectRepo project.ProjectRepository,
+	projectDataRepo project.DataRepository,
 	flagSettingDataRepo flagsetting.DataRepository,
 	environmentRepo EnvironmentRepository,
 ) *EnvironmentServer {
 	return &EnvironmentServer{
 		mongoClient:         client,
 		userDataRepo:        userDataRepo,
-		projectRepo:         projectRepo,
+		projectDataRepo:     projectDataRepo,
 		flagSettingDataRepo: flagSettingDataRepo,
 		environmentRepo:     environmentRepo,
 	}

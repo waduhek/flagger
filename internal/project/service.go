@@ -32,9 +32,9 @@ func injectProjectKeyIntoContext(
 	return context.WithValue(ctx, projectKey{}, token)
 }
 
-// ProjectKeyFromContext returns the project key from the provided context if it
-// is available.
-func ProjectKeyFromContext(ctx context.Context) (string, bool) {
+// KeyFromContext returns the project key from the provided context if it is
+// available.
+func KeyFromContext(ctx context.Context) (string, bool) {
 	token, ok := ctx.Value(projectKey{}).(string)
 	if !ok {
 		return "", false

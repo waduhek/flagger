@@ -23,7 +23,7 @@ func (s *FlagProviderServer) GetFlag(
 	ctx context.Context,
 	req *providerpb.GetFlagRequest,
 ) (*providerpb.GetFlagResponse, error) {
-	projectKey, ok := project.ProjectKeyFromContext(ctx)
+	projectKey, ok := project.KeyFromContext(ctx)
 	if !ok {
 		log.Printf("could not find project key in request")
 		return nil, project.ErrProjectKeyNotFound

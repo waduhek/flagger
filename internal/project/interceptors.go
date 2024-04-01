@@ -7,10 +7,9 @@ import (
 	"google.golang.org/grpc"
 )
 
-// ProjectKeyUnaryInterceptor intercepts an incoming request to the provided
-// server path and ensures that the request contains the project key in the
-// metadata.
-func ProjectKeyUnaryInterceptor(serverPath string) grpc.UnaryServerInterceptor {
+// KeyUnaryInterceptor intercepts an incoming request to the provided server
+// path and ensures that the request contains the project key in the metadata.
+func KeyUnaryInterceptor(serverPath string) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req any,

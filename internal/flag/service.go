@@ -22,7 +22,7 @@ type FlagServer struct {
 	flagpb.UnimplementedFlagServer
 	mongoClient         *mongo.Client
 	userDataRepo        user.DataRepository
-	projectRepo         project.ProjectRepository
+	projectDataRepo     project.DataRepository
 	environmentRepo     environment.EnvironmentRepository
 	flagRepo            FlagRepository
 	flagSettingDataRepo flagsetting.DataRepository
@@ -55,7 +55,7 @@ func (s *FlagServer) CreateFlag(
 	// Get the project that the flag is to be added to. If the project does not
 	// belong to the currently authenticated user, or if the project doesn't
 	// exist, return an error.
-	fetchedProject, err := s.projectRepo.GetByNameAndUserID(
+	fetchedProject, err := s.projectDataRepo.GetByNameAndUserID(
 		ctx,
 		projectName,
 		fetchedUser.ID,
@@ -177,7 +177,7 @@ func (s *FlagServer) handleCreateFlag(
 		}
 
 		// Add the flag's object ID to the list of flags in the project.
-		_, projectFlagUpdateErr := s.projectRepo.AddFlag(
+		_, projectFlagUpdateErr := s.projectDataRepo.AddFlag(
 			ctx,
 			fetchedProject.ID,
 			savedFlagID,
@@ -192,7 +192,7 @@ func (s *FlagServer) handleCreateFlag(
 		}
 
 		// Add all the object IDs of the flag settings to the project.
-		_, projectSettingErr := s.projectRepo.AddFlagSettings(
+		_, projectSettingErr := s.projectDataRepo.AddFlagSettings(
 			ctx,
 			fetchedProject.ID,
 			flagSettingIDs...,
@@ -235,7 +235,7 @@ func (s *FlagServer) UpdateFlagStatus(
 	isActive := req.GetIsActive()
 
 	// Get the project that the has to be updated.
-	fetchedProject, err := s.projectRepo.GetByNameAndUserID(
+	fetchedProject, err := s.projectDataRepo.GetByNameAndUserID(
 		ctx,
 		projectName,
 		fetchedUser.ID,
@@ -318,7 +318,7 @@ func (s *FlagServer) UpdateFlagStatus(
 func NewFlagServer(
 	mongoClient *mongo.Client,
 	userDataRepo user.DataRepository,
-	projectRepo project.ProjectRepository,
+	projectDataRepo project.DataRepository,
 	environmentRepo environment.EnvironmentRepository,
 	flagRepo FlagRepository,
 	flagSettingDataRepo flagsetting.DataRepository,
@@ -326,7 +326,7 @@ func NewFlagServer(
 	return &FlagServer{
 		mongoClient:         mongoClient,
 		userDataRepo:        userDataRepo,
-		projectRepo:         projectRepo,
+		projectDataRepo:     projectDataRepo,
 		environmentRepo:     environmentRepo,
 		flagRepo:            flagRepo,
 		flagSettingDataRepo: flagSettingDataRepo,
