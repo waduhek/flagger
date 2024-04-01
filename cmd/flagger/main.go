@@ -105,7 +105,7 @@ func initEnvironmentServer(
 	)
 }
 
-func initFlagServer(client *mongo.Client, db *mongo.Database) *flag.FlagServer {
+func initFlagServer(client *mongo.Client, db *mongo.Database) *flag.Server {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()

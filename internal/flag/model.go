@@ -16,7 +16,7 @@ type Flag struct {
 	CreatedAt time.Time          `bson:"created_at"`
 }
 
-type FlagRepository interface {
+type DataRepository interface {
 	// Save creates a new `Flag` document.
 	Save(ctx context.Context, flag *Flag) (*mongo.InsertOneResult, error)
 

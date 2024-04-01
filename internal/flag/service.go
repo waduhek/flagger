@@ -18,19 +18,19 @@ import (
 	"github.com/waduhek/flagger/internal/user"
 )
 
-type FlagServer struct {
+type Server struct {
 	flagpb.UnimplementedFlagServer
 	mongoClient         *mongo.Client
 	userDataRepo        user.DataRepository
 	projectDataRepo     project.DataRepository
 	environmentDataRepo environment.DataRepository
-	flagRepo            FlagRepository
+	flagDataRepo        DataRepository
 	flagSettingDataRepo flagsetting.DataRepository
 }
 
 type mongoTxnCallback func(ctx mongo.SessionContext) (interface{}, error)
 
-func (s *FlagServer) CreateFlag(
+func (s *Server) CreateFlag(
 	ctx context.Context,
 	req *flagpb.CreateFlagRequest,
 ) (*flagpb.CreateFlagResponse, error) {
@@ -110,7 +110,7 @@ func (s *FlagServer) CreateFlag(
 }
 
 // handleCreateFlag performs the transaction for saving the flag in the DB.
-func (s *FlagServer) handleCreateFlag(
+func (s *Server) handleCreateFlag(
 	req *flagpb.CreateFlagRequest,
 	user *user.User,
 	fetchedProject *project.Project,
@@ -126,7 +126,7 @@ func (s *FlagServer) handleCreateFlag(
 			CreatedAt: time.Now(),
 		}
 
-		flagSaveResult, err := s.flagRepo.Save(ctx, newFlag)
+		flagSaveResult, err := s.flagDataRepo.Save(ctx, newFlag)
 		if err != nil {
 			log.Printf("error while saving the flag: %v", err)
 
@@ -210,7 +210,7 @@ func (s *FlagServer) handleCreateFlag(
 	}
 }
 
-func (s *FlagServer) UpdateFlagStatus(
+func (s *Server) UpdateFlagStatus(
 	ctx context.Context,
 	req *flagpb.UpdateFlagStatusRequest,
 ) (*flagpb.UpdateFlagStatusResponse, error) {
@@ -271,7 +271,7 @@ func (s *FlagServer) UpdateFlagStatus(
 	}
 
 	// Get the flag to update.
-	flag, err := s.flagRepo.GetByNameAndProjectID(
+	flag, err := s.flagDataRepo.GetByNameAndProjectID(
 		ctx,
 		flagName,
 		fetchedProject.ID,
@@ -320,15 +320,15 @@ func NewFlagServer(
 	userDataRepo user.DataRepository,
 	projectDataRepo project.DataRepository,
 	environmentDataRepo environment.DataRepository,
-	flagRepo FlagRepository,
+	flagDataRepo DataRepository,
 	flagSettingDataRepo flagsetting.DataRepository,
-) *FlagServer {
-	return &FlagServer{
+) *Server {
+	return &Server{
 		mongoClient:         mongoClient,
 		userDataRepo:        userDataRepo,
 		projectDataRepo:     projectDataRepo,
 		environmentDataRepo: environmentDataRepo,
-		flagRepo:            flagRepo,
+		flagDataRepo:        flagDataRepo,
 		flagSettingDataRepo: flagSettingDataRepo,
 	}
 }

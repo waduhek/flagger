@@ -11,18 +11,18 @@ import (
 
 const flagCollection string = "flags"
 
-type flagRepository struct {
+type MongoDataRepository struct {
 	coll *mongo.Collection
 }
 
-func (r *flagRepository) Save(
+func (r *MongoDataRepository) Save(
 	ctx context.Context,
 	flag *Flag,
 ) (*mongo.InsertOneResult, error) {
 	return r.coll.InsertOne(ctx, flag)
 }
 
-func (r *flagRepository) GetByID(
+func (r *MongoDataRepository) GetByID(
 	ctx context.Context,
 	flagID primitive.ObjectID,
 ) (*Flag, error) {
@@ -38,7 +38,7 @@ func (r *flagRepository) GetByID(
 	return &flag, nil
 }
 
-func (r *flagRepository) GetByNameAndProjectID(
+func (r *MongoDataRepository) GetByNameAndProjectID(
 	ctx context.Context,
 	flagName string,
 	projectID primitive.ObjectID,
@@ -75,7 +75,7 @@ func setupCollIndexes(ctx context.Context, coll *mongo.Collection) error {
 func NewFlagRepository(
 	ctx context.Context,
 	db *mongo.Database,
-) (*flagRepository, error) {
+) (*MongoDataRepository, error) {
 	coll := db.Collection(flagCollection)
 
 	err := setupCollIndexes(ctx, coll)
@@ -83,5 +83,5 @@ func NewFlagRepository(
 		return nil, err
 	}
 
-	return &flagRepository{coll}, nil
+	return &MongoDataRepository{coll}, nil
 }
