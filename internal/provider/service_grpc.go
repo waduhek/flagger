@@ -15,8 +15,8 @@ import (
 // FlagProviderServer is an implementation of the FlagProvider service.
 type FlagProviderServer struct {
 	providerpb.UnimplementedFlagProviderServer
-	providerRepo ProviderRepository
-	cacheRepo    ProviderCacheRepository
+	providerDataRepo  DataRepository
+	providerCacheRepo CacheRepository
 }
 
 func (s *FlagProviderServer) GetFlag(
@@ -54,7 +54,7 @@ func (s *FlagProviderServer) GetFlag(
 	environmentName := req.GetEnvironment()
 	flagName := req.GetFlagName()
 
-	flagDetails, err := s.providerRepo.GetFlagDetailsByProjectKey(
+	flagDetails, err := s.providerDataRepo.GetFlagDetailsByProjectKey(
 		ctx,
 		projectKey,
 		environmentName,
@@ -80,7 +80,7 @@ func (s *FlagProviderServer) GetFlag(
 		FlagName:        flagName,
 	}
 
-	cacheErr := s.cacheRepo.CacheFlagStatus(ctx, &cacheParams, status)
+	cacheErr := s.providerCacheRepo.CacheFlagStatus(ctx, &cacheParams, status)
 	if cacheErr != nil {
 		log.Printf("could not cache flag status: %v. ignoring error", cacheErr)
 	}
@@ -108,7 +108,7 @@ func (s *FlagProviderServer) checkIfFlagStatusIsCached(
 		FlagName:        flagName,
 	}
 
-	statusExists, err := s.cacheRepo.IsFlagStatusCached(ctx, &cacheParams)
+	statusExists, err := s.providerCacheRepo.IsFlagStatusCached(ctx, &cacheParams)
 	if err != nil {
 		log.Printf(
 			"error occurred while checking if flag status is cached: %v",
@@ -135,7 +135,7 @@ func (s *FlagProviderServer) getCachedFlagStatus(
 		FlagName:        flagName,
 	}
 
-	cachedStatus, err := s.cacheRepo.GetFlagStatus(ctx, &cacheParams)
+	cachedStatus, err := s.providerCacheRepo.GetFlagStatus(ctx, &cacheParams)
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			log.Print("Could not find cached flag status")
@@ -149,11 +149,11 @@ func (s *FlagProviderServer) getCachedFlagStatus(
 }
 
 func NewFlagProviderServer(
-	providerRepo ProviderRepository,
-	cacheRepo ProviderCacheRepository,
+	providerDataRepo DataRepository,
+	providerCacheRepo CacheRepository,
 ) *FlagProviderServer {
 	return &FlagProviderServer{
-		providerRepo: providerRepo,
-		cacheRepo:    cacheRepo,
+		providerDataRepo:  providerDataRepo,
+		providerCacheRepo: providerCacheRepo,
 	}
 }
