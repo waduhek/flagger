@@ -35,6 +35,8 @@ import (
 	"github.com/waduhek/flagger/internal/user"
 )
 
+const mongoDBConnectionStringFile = "/etc/flagger-mongodb/connectionString.standard"
+
 func initAuthServer(db *mongo.Database) *auth.Server {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
@@ -156,7 +158,13 @@ func initFlagProviderServer(
 }
 
 func connectMongo() *mongo.Client {
-	mongoConnectionString := os.Getenv("FLAGGER_MONGO_URI")
+	mongoConnectionStringBytes, readFileErr :=
+		os.ReadFile(mongoDBConnectionStringFile)
+	if readFileErr != nil {
+		log.Panicf("could not read connection string file: %v", readFileErr)
+	}
+
+	mongoConnectionString := string(mongoConnectionStringBytes)
 
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.
