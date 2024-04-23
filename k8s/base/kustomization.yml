@@ -1,7 +1,8 @@
 resources:
   # MongoDB resources.
-  - mongo/headless-service.yml
-  - mongo/statefulset.yml
+  - mongo/admin-secret.yml
+  - mongo/user-secret.yml
+  - mongo/replicaset.yml
   # Redis resources.
   - redis/headless-service.yml
   - redis/configmap.yml
