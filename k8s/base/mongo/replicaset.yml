@@ -1,0 +1,41 @@
+apiVersion: mongodbcommunity.mongodb.com/v1
+kind: MongoDBCommunity
+
+metadata:
+  name: mongodb
+  labels:
+    app: flagger
+    service: mongodb
+
+spec:
+  type: ReplicaSet
+  members: 3
+  version: "7.0.8"
+
+  security:
+    authentication:
+      modes: ["SCRAM"]
+
+  users:
+    - name: flagger-admin
+      db: admin
+      passwordSecretRef: # a reference to the secret that will be used to generate the user's password
+        name: flagger-admin-password
+      roles:
+        - name: clusterAdmin
+          db: admin
+        - name: userAdminAnyDatabase
+          db: admin
+      scramCredentialsSecretName: flagger-admin-scram
+
+    - name: flagger-user
+      db: flagger
+      passwordSecretRef:
+        name: flagger-user-password
+      roles:
+        - name: readWrite
+          db: flagger
+      scramCredentialsSecretName: flagger-user-scram
+
+  additionalMongodConfig:
+    storage.wiredTiger.engineConfig.journalCompressor: zlib
