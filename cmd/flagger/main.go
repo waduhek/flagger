@@ -11,9 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/redis/go-redis/v9"
 
@@ -32,10 +30,9 @@ import (
 	"github.com/waduhek/flagger/internal/flagsetting"
 	"github.com/waduhek/flagger/internal/project"
 	"github.com/waduhek/flagger/internal/provider"
+	"github.com/waduhek/flagger/internal/startup"
 	"github.com/waduhek/flagger/internal/user"
 )
-
-const mongoDBConnectionStringFile = "/etc/flagger-mongodb/connectionString.standard"
 
 func initAuthServer(db *mongo.Database) *auth.Server {
 	ctx := context.Background()
@@ -157,43 +154,6 @@ func initFlagProviderServer(
 	return provider.NewFlagProviderServer(providerRepo, cacheRepo)
 }
 
-func connectMongo() *mongo.Client {
-	mongoConnectionStringBytes, readFileErr :=
-		os.ReadFile(mongoDBConnectionStringFile)
-	if readFileErr != nil {
-		log.Panicf("could not read connection string file: %v", readFileErr)
-	}
-
-	mongoConnectionString := string(mongoConnectionStringBytes)
-
-	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	opts := options.
-		Client().
-		ApplyURI(mongoConnectionString).
-		SetServerAPIOptions(serverAPI)
-
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
-	defer cancel()
-
-	client, err := mongo.Connect(ctx, opts)
-	if err != nil {
-		log.Panicf("could not connect to mongo: %v", err)
-	}
-
-	var result bson.M
-
-	pingErr := client.
-		Database("admin").
-		RunCommand(ctx, bson.D{{Key: "ping", Value: 1}}).
-		Decode(&result)
-	if pingErr != nil {
-		log.Panicf("error while pinging mongo: %v", pingErr)
-	}
-
-	return client
-}
-
 func connectRedis() *redis.Client {
 	redisConnectionString := os.Getenv("FLAGGER_REDIS_URI")
 
@@ -239,7 +199,10 @@ func main() {
 		log.Panicf("could not listen on port %d: %v", serverPort, lisErr)
 	}
 
-	mongoClient := connectMongo()
+	mongoClient, mongoClientErr := startup.ConnectMongo()
+	if mongoClientErr != nil {
+		panic(mongoClientErr)
+	}
 	mongoDB := mongoClient.Database(flaggerDB)
 
 	redisClient := connectRedis()

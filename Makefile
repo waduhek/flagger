@@ -33,6 +33,13 @@ build-dev:
 test:
 	go test ./...
 
+.PHONY: integration-test
+integration-test:
+	./scripts/run-integration-tests.sh
+
+.PHONY: test-all
+test-all: test integration-test
+
 .PHONY: bench
 bench:
 	go test -bench=. -run=^# -count=5 -benchmem ./...
