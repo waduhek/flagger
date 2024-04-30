@@ -154,28 +154,6 @@ func initFlagProviderServer(
 	return provider.NewFlagProviderServer(providerRepo, cacheRepo)
 }
 
-func connectRedis() *redis.Client {
-	redisConnectionString := os.Getenv("FLAGGER_REDIS_URI")
-
-	opt, err := redis.ParseURL(redisConnectionString)
-	if err != nil {
-		log.Panicf("could not parse redis connection string: %v", err)
-	}
-
-	client := redis.NewClient(opt)
-
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
-	defer cancel()
-
-	pingErr := client.Ping(ctx).Err()
-	if pingErr != nil {
-		log.Panicf("error while pinging redis: %v", pingErr)
-	}
-
-	return client
-}
-
 func gracefulShutdown(cleanup func()) {
 	sig := make(chan os.Signal, 1)
 
@@ -205,7 +183,10 @@ func main() {
 	}
 	mongoDB := mongoClient.Database(flaggerDB)
 
-	redisClient := connectRedis()
+	redisClient, redisClientErr := startup.ConnectRedis()
+	if redisClientErr != nil {
+		panic(redisClientErr)
+	}
 
 	// Initialising all the servers
 	authServer := initAuthServer(mongoDB)
