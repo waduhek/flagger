@@ -59,7 +59,9 @@ func VerifyJWT(str string) (*FlaggerJWTClaims, error) {
 		str,
 		&FlaggerJWTClaims{},
 		func(t *jwt.Token) (interface{}, error) {
-			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			signingMethod, ok := t.Method.(*jwt.SigningMethodHMAC)
+
+			if !ok || signingMethod != jwt.SigningMethodHS512 {
 				return nil, ErrInvalidJWT
 			}
 
@@ -78,7 +80,7 @@ func VerifyJWT(str string) (*FlaggerJWTClaims, error) {
 
 	claims, ok := parsedToken.Claims.(*FlaggerJWTClaims)
 	if !ok {
-		log.Println("could not parse token claims as RegisteredClaims")
+		log.Println("could not parse token claims as FlaggerJWTClaims")
 		return nil, ErrNoTokenClaims
 	}
 
