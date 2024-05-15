@@ -45,8 +45,7 @@ func (s *Server) CreateFlag(
 
 	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
-		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ErrCouldNotFetch
+		return nil, err
 	}
 
 	projectName := req.GetProjectName()
@@ -225,8 +224,7 @@ func (s *Server) UpdateFlagStatus(
 
 	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
-		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ErrCouldNotFetch
+		return nil, err
 	}
 
 	projectName := req.GetProjectName()

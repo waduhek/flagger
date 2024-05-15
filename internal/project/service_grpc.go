@@ -40,8 +40,7 @@ func (p *Server) CreateNewProject(
 
 	fetchedUser, err := p.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
-		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ErrCouldNotFetch
+		return nil, err
 	}
 
 	projectName := req.GetProjectName()
@@ -99,8 +98,7 @@ func (p *Server) GetProjectKey(
 
 	fetchedUser, err := p.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
-		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ErrCouldNotFetch
+		return nil, err
 	}
 
 	projectName := req.GetProjectName()

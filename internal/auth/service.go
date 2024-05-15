@@ -4,8 +4,6 @@ import (
 	"context"
 	"log"
 
-	"go.mongodb.org/mongo-driver/mongo"
-
 	"github.com/waduhek/flagger/proto/authpb"
 
 	"github.com/waduhek/flagger/internal/hash"
@@ -36,27 +34,18 @@ func (s *Server) CreateNewUser(
 		Username: username,
 		Name:     name,
 		Email:    email,
-		Password: user.Password{
+		Password: &user.Password{
 			Hash: passwordHash.Hash,
 			Salt: passwordHash.Salt,
 		},
 	}
 
-	newUserResult, err := s.userDataRepo.Save(ctx, &newUser)
+	newUserID, err := s.userDataRepo.Save(ctx, &newUser)
 	if err != nil {
-		if mongo.IsDuplicateKeyError(err) {
-			log.Printf("a user with username %q already exists", username)
-			return nil, user.ErrUsernameTaken
-		}
-
-		log.Printf("could not save user details: %v", err)
-		return nil, user.ErrNotSaved
+		return nil, err
 	}
 
-	log.Printf(
-		"created new user, username %s, id %s",
-		username, newUserResult.InsertedID,
-	)
+	log.Printf("created new user, username %s, id %s", username, newUserID)
 
 	response := authpb.CreateNewUserResponse{}
 
@@ -72,8 +61,7 @@ func (s *Server) Login(
 
 	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
-		log.Printf("could not get details of user by username: %v", err)
-		return nil, user.ErrCouldNotFetch
+		return nil, err
 	}
 
 	if !hash.VerifyPasswordHash(
@@ -110,8 +98,7 @@ func (s *Server) ChangePassword(
 
 	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
-		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ErrCouldNotFetch
+		return nil, err
 	}
 
 	currentPassword := req.GetCurrentPassword()
@@ -139,8 +126,7 @@ func (s *Server) ChangePassword(
 
 	_, updateErr := s.userDataRepo.UpdatePassword(ctx, username, &password)
 	if updateErr != nil {
-		log.Printf("error while saving new password: %v", updateErr)
-		return nil, user.ErrPasswordUpdate
+		return nil, updateErr
 	}
 
 	log.Printf("changed password for user %q", username)
