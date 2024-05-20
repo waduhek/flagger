@@ -5,54 +5,53 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Project struct {
-	ID           primitive.ObjectID   `bson:"_id,omitempty"`
-	Key          string               `bson:"key"`
-	Name         string               `bson:"name"`
-	Environments []primitive.ObjectID `bson:"environments,omitempty"`
-	Flags        []primitive.ObjectID `bson:"flags,omitempty"`
-	FlagSettings []primitive.ObjectID `bson:"flag_settings,omitempty"`
-	CreatedBy    primitive.ObjectID   `bson:"created_by"`
-	CreatedAt    time.Time            `bson:"created_at"`
-	UpdatedAt    time.Time            `bson:"updated_at"`
+	ID           string
+	Key          string
+	Name         string
+	Environments []string
+	Flags        []string
+	FlagSettings []string
+	CreatedBy    string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // DataRepository is an interface to the operations that can be performed on
 // the projects collection.
 type DataRepository interface {
-	// Creates a new `Project` document
-	Save(ctx context.Context, project *Project) (*mongo.InsertOneResult, error)
+	// Save creates a new `Project` and returns the ID of the created project.
+	Save(ctx context.Context, project *Project) (string, error)
 
-	// Gets the project by the name and the ID of the user that created the
-	// project.
+	// GetByNameAndUserID gets the project by the name and the ID of the user
+	// that created the project.
 	GetByNameAndUserID(
 		ctx context.Context,
 		projectName string,
-		userID primitive.ObjectID,
+		userID string,
 	) (*Project, error)
 
-	// Adds a new environment to the project by the project name and the user
+	// AddEnvironment adds a new environment ID to the project by the project
 	// ID.
 	AddEnvironment(
 		ctx context.Context,
-		projectID primitive.ObjectID,
+		projectID string,
 		environmentID primitive.ObjectID,
-	) (*mongo.UpdateResult, error)
+	) (uint, error)
 
-	// Adds a new flag to the project by the project name.
+	// AddFlag adds a new flag ID to the project by the project ID.
 	AddFlag(
 		ctx context.Context,
-		projectID primitive.ObjectID,
+		projectID string,
 		flagID primitive.ObjectID,
-	) (*mongo.UpdateResult, error)
+	) (uint, error)
 
-	// AddFlagSettings adds new flag settings to the project.
+	// AddFlagSettings adds new flag setting IDs to the project.
 	AddFlagSettings(
 		ctx context.Context,
 		projectID primitive.ObjectID,
 		flagSettingIDs ...primitive.ObjectID,
-	) (*mongo.UpdateResult, error)
+	) (uint, error)
 }

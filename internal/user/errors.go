@@ -32,3 +32,10 @@ var ErrNotSaved = status.Error(
 // ErrPasswordUpdate is a GRPC error that occurs when the password could not be
 // updated.
 var ErrPasswordUpdate = status.Error(codes.Internal, "could not save password")
+
+// ErrUserIDConvert is a GRPC error that is returned when the user ID could not
+// be converted to the expected type.
+var ErrUserIDConvert = status.Error(
+	codes.Internal,
+	"could not convert user ID to expected format",
+)

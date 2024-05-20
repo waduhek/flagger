@@ -2,11 +2,7 @@ package project
 
 import (
 	"context"
-	"errors"
 	"log"
-	"time"
-
-	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/waduhek/flagger/proto/projectpb"
 
@@ -49,8 +45,6 @@ func (p *Server) CreateNewProject(
 		Name:      projectName,
 		Key:       generateProjectKey(projectKeyLen),
 		CreatedBy: fetchedUser.ID,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
 	}
 
 	var projectErr error
@@ -68,17 +62,7 @@ func (p *Server) CreateNewProject(
 	// If all attempts to save the project were unsuccessful, then return the
 	// error.
 	if projectErr != nil {
-		if mongo.IsDuplicateKeyError(projectErr) {
-			log.Printf(
-				"a project with name %q exists for user %q",
-				projectName,
-				username,
-			)
-			return nil, ErrNameTaken
-		}
-
-		log.Printf("error while creating new project: %v", projectErr)
-		return nil, ErrCouldNotSave
+		return nil, projectErr
 	}
 
 	return &projectpb.CreateNewProjectResponse{}, nil
@@ -109,18 +93,7 @@ func (p *Server) GetProjectKey(
 		fetchedUser.ID,
 	)
 	if err != nil {
-		log.Printf(
-			"error while fetching project %q with user %q: %v",
-			projectName,
-			username,
-			err,
-		)
-
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, ErrNotFound
-		}
-
-		return nil, ErrCouldNotFetch
+		return nil, err
 	}
 
 	response := projectpb.GetProjectKeyResponse{ProjectKey: project.Key}

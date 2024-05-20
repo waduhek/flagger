@@ -2,7 +2,6 @@ package environment
 
 import (
 	"context"
-	"errors"
 	"log"
 	"time"
 
@@ -53,17 +52,7 @@ func (s *Server) CreateEnvironment(
 		fetchedUser.ID,
 	)
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			log.Printf(
-				"no projects were found with name %q with user %q",
-				projectName,
-				username,
-			)
-			return nil, project.ErrNotFound
-		}
-
-		log.Printf("error occurred while fetching projects: %v", err)
-		return nil, project.ErrCouldNotFetch
+		return nil, err
 	}
 
 	// Create a session that will initiate a transaction to save the details of
@@ -182,11 +171,7 @@ func (s *Server) handleCreateEnvrionment(
 				insertedFlagSettingIDs...,
 			)
 			if projectFlagSettingErr != nil {
-				log.Printf(
-					"error while updating project with flag settings: %v",
-					projectFlagSettingErr,
-				)
-				return nil, project.ErrAddFlagSetting
+				return nil, projectFlagSettingErr
 			}
 		}
 
@@ -197,13 +182,7 @@ func (s *Server) handleCreateEnvrionment(
 			environmentID,
 		)
 		if projectUpdateErr != nil {
-			log.Printf(
-				"error while adding environment %q to project %q: %v",
-				environmentID,
-				fetchedProject.ID,
-				projectUpdateErr,
-			)
-			return nil, project.ErrAddEnvironment
+			return nil, projectUpdateErr
 		}
 
 		return nil, nil

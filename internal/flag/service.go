@@ -60,18 +60,7 @@ func (s *Server) CreateFlag(
 		fetchedUser.ID,
 	)
 	if err != nil {
-		log.Printf(
-			"error while getting project %q with user %q: %v",
-			projectName,
-			username,
-			err,
-		)
-
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, project.ErrNotFound
-		}
-
-		return nil, project.ErrCouldNotFetch
+		return nil, err
 	}
 
 	// If there are no environments configured for the project, don't allow any
@@ -182,12 +171,7 @@ func (s *Server) handleCreateFlag(
 			savedFlagID,
 		)
 		if projectFlagUpdateErr != nil {
-			log.Printf(
-				"error while updating project with the flag: %v",
-				projectFlagUpdateErr,
-			)
-
-			return nil, project.ErrAddFlag
+			return nil, projectFlagUpdateErr
 		}
 
 		// Add all the object IDs of the flag settings to the project.
@@ -197,12 +181,7 @@ func (s *Server) handleCreateFlag(
 			flagSettingIDs...,
 		)
 		if projectSettingErr != nil {
-			log.Printf(
-				"error while updating project with flag settings: %v",
-				projectSettingErr,
-			)
-
-			return nil, project.ErrAddFlagSetting
+			return nil, projectSettingErr
 		}
 
 		return nil, nil
@@ -239,13 +218,7 @@ func (s *Server) UpdateFlagStatus(
 		fetchedUser.ID,
 	)
 	if err != nil {
-		log.Printf("error while fetching project %q: %v", projectName, err)
-
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, project.ErrNotFound
-		}
-
-		return nil, project.ErrCouldNotFetch
+		return nil, err
 	}
 
 	// Get the environment that is to be updated.
