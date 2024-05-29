@@ -102,30 +102,9 @@ func (s *Server) handleCreateEnvrionment(
 			CreatedAt: time.Now(),
 		}
 
-		envResult, envSaveErr := s.environmentDataRepo.Save(ctx, &newEnvironment)
+		environmentID, envSaveErr := s.environmentDataRepo.Save(ctx, &newEnvironment)
 		if envSaveErr != nil {
-			if mongo.IsDuplicateKeyError(envSaveErr) {
-				log.Printf(
-					"an environment %q already exists for project %q",
-					environmentName,
-					fetchedProject.Name,
-				)
-				return nil, ErrNameTaken
-			}
-
-			log.Printf(
-				"could not create environment %q for project %q",
-				environmentName,
-				fetchedProject.ID,
-			)
-			return nil, ErrCouldNotSave
-		}
-
-		// Cast the returned ID of the inserted environment as an ObjectID.
-		environmentID, ok := envResult.InsertedID.(primitive.ObjectID)
-		if !ok {
-			log.Printf("environment ID is not of type ObjectID")
-			return nil, ErrEnvironmentIDCast
+			return nil, envSaveErr
 		}
 
 		// Create new flag settings for all the flags that are present in the

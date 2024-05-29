@@ -228,17 +228,7 @@ func (s *Server) UpdateFlagStatus(
 		fetchedProject.ID,
 	)
 	if err != nil {
-		log.Printf(
-			"error while fetching environment %q: %v",
-			environmentName,
-			err,
-		)
-
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, environment.ErrNotFound
-		}
-
-		return nil, environment.ErrCouldNotFetch
+		return nil, err
 	}
 
 	// Get the flag to update.
