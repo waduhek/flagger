@@ -114,19 +114,10 @@ func (s *Server) handleCreateFlag(
 			CreatedAt: time.Now(),
 		}
 
-		flagSaveResult, err := s.flagDataRepo.Save(ctx, newFlag)
+		savedFlagID, err := s.flagDataRepo.Save(ctx, newFlag)
 		if err != nil {
-			log.Printf("error while saving the flag: %v", err)
-
-			if mongo.IsDuplicateKeyError(err) {
-				return nil, ErrNameTaken
-			}
-
-			return nil, ErrCouldNotSave
+			return nil, err
 		}
-
-		// Cast the returned ID of the saved flag as an ObjectID.
-		savedFlagID, _ := flagSaveResult.InsertedID.(primitive.ObjectID)
 
 		// Get all the environments that the project has.
 		projectEnvIDs := fetchedProject.Environments
@@ -238,13 +229,7 @@ func (s *Server) UpdateFlagStatus(
 		fetchedProject.ID,
 	)
 	if err != nil {
-		log.Printf("error while fetching flag %q: %v", flagName, err)
-
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, ErrNotFound
-		}
-
-		return nil, ErrCouldNotFetch
+		return nil, err
 	}
 
 	// Update the flag setting to the desired value.

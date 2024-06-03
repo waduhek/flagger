@@ -2,6 +2,9 @@ package flag
 
 import (
 	"context"
+	"errors"
+	"log"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -11,6 +14,15 @@ import (
 
 const flagCollection string = "flags"
 
+// flagMongoModel is the MongoDB representation of the `Flag` structure.
+type flagMongoModel struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty"`
+	Name      string             `bson:"name"`
+	ProjectID primitive.ObjectID `bson:"project_id"`
+	CreatedBy primitive.ObjectID `bson:"created_by"`
+	CreatedAt time.Time          `bson:"created_at"`
+}
+
 type MongoDataRepository struct {
 	coll *mongo.Collection
 }
@@ -18,44 +30,108 @@ type MongoDataRepository struct {
 func (r *MongoDataRepository) Save(
 	ctx context.Context,
 	flag *Flag,
-) (*mongo.InsertOneResult, error) {
-	return r.coll.InsertOne(ctx, flag)
+) (string, error) {
+	projectIDObjID, projectIDErr := primitive.ObjectIDFromHex(flag.ProjectID)
+	if projectIDErr != nil {
+		log.Printf("could not convert project id to object id: %v", projectIDErr)
+		return "", ErrCouldNotSave
+	}
+
+	userIDObjID, userIDErr := primitive.ObjectIDFromHex(flag.CreatedBy)
+	if userIDErr != nil {
+		log.Printf("could not convert user id to object id: %v", userIDErr)
+		return "", ErrCouldNotSave
+	}
+
+	flagToSave := &flagMongoModel{
+		Name:      flag.Name,
+		ProjectID: projectIDObjID,
+		CreatedBy: userIDObjID,
+		CreatedAt: time.Now(),
+	}
+
+	saveResult, saveErr := r.coll.InsertOne(ctx, flagToSave)
+	if saveErr != nil {
+		if mongo.IsDuplicateKeyError(saveErr) {
+			log.Printf("flag name is taken: %v", saveErr)
+			return "", ErrNameTaken
+		}
+
+		log.Printf("error while saving flag: %v", saveErr)
+		return "", ErrCouldNotSave
+	}
+
+	savedFlagID, ok := saveResult.InsertedID.(primitive.ObjectID)
+	if !ok {
+		log.Printf("could not assert saved flag id as object id")
+		return "", ErrCouldNotSave
+	}
+
+	return savedFlagID.Hex(), nil
 }
 
 func (r *MongoDataRepository) GetByID(
 	ctx context.Context,
-	flagID primitive.ObjectID,
+	flagID string,
 ) (*Flag, error) {
-	query := bson.D{{Key: "_id", Value: flagID}}
+	flagIDObjID, flagIDErr := primitive.ObjectIDFromHex(flagID)
+	if flagIDErr != nil {
+		log.Printf("could not convert flag id to object id: %v", flagIDErr)
+		return nil, ErrCouldNotFetch
+	}
 
-	var flag Flag
+	query := bson.D{{Key: "_id", Value: flagIDObjID}}
 
-	err := r.coll.FindOne(ctx, query).Decode(&flag)
+	var decodedFlag flagMongoModel
+
+	err := r.coll.FindOne(ctx, query).Decode(&decodedFlag)
 	if err != nil {
 		return nil, err
 	}
 
-	return &flag, nil
+	return mapDecodedFlag(&decodedFlag), nil
 }
 
 func (r *MongoDataRepository) GetByNameAndProjectID(
 	ctx context.Context,
 	flagName string,
-	projectID primitive.ObjectID,
+	projectID string,
 ) (*Flag, error) {
-	query := bson.D{
-		{Key: "name", Value: flagName},
-		{Key: "project_id", Value: projectID},
+	projectIDObjID, projectIDErr := primitive.ObjectIDFromHex(projectID)
+	if projectIDErr != nil {
+		log.Printf("could not convert project id to object id: %v", projectIDErr)
+		return nil, ErrCouldNotFetch
 	}
 
-	var flag Flag
+	query := bson.D{
+		{Key: "name", Value: flagName},
+		{Key: "project_id", Value: projectIDObjID},
+	}
 
-	err := r.coll.FindOne(ctx, query).Decode(&flag)
+	var decodedFlag flagMongoModel
+
+	err := r.coll.FindOne(ctx, query).Decode(&decodedFlag)
 	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			log.Printf("no flag found with name %q and project id %q", flagName, projectID)
+			return nil, ErrNotFound
+		}
+
+		log.Printf("error while getting flag: %v", err)
 		return nil, err
 	}
 
-	return &flag, nil
+	return mapDecodedFlag(&decodedFlag), nil
+}
+
+func mapDecodedFlag(decodedFlag *flagMongoModel) *Flag {
+	return &Flag{
+		ID:        decodedFlag.ID.Hex(),
+		Name:      decodedFlag.Name,
+		ProjectID: decodedFlag.ProjectID.Hex(),
+		CreatedBy: decodedFlag.CreatedBy.Hex(),
+		CreatedAt: decodedFlag.CreatedAt,
+	}
 }
 
 func setupCollIndexes(ctx context.Context, coll *mongo.Collection) error {
