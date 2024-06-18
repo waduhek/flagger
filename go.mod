@@ -8,7 +8,7 @@ require (
 	go.mongodb.org/mongo-driver v1.15.1
 	golang.org/x/crypto v0.24.0
 	google.golang.org/grpc v1.64.0
-	google.golang.org/protobuf v1.34.1
+	google.golang.org/protobuf v1.34.2
 )
 
 require (
