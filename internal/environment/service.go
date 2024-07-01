@@ -5,7 +5,6 @@ import (
 	"log"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/waduhek/flagger/proto/environmentpb"
@@ -125,22 +124,13 @@ func (s *Server) handleCreateEnvrionment(
 
 		// Save the flag settings to the collection.
 		if len(flagSettings) > 0 {
-			insertedFlagSettings, flagSettingSaveErr := s.flagSettingDataRepo.SaveMany(
+			insertedFlagSettingIDs, flagSettingSaveErr := s.flagSettingDataRepo.SaveMany(
 				ctx,
 				flagSettings,
 			)
 			if flagSettingSaveErr != nil {
 				log.Printf("error while saving flag settings: %v", flagSettingSaveErr)
 				return nil, flagsetting.ErrCouldNotSave
-			}
-
-			// Cast the IDs of all the flag settings as ObjectIDs.
-			var insertedFlagSettingIDs []primitive.ObjectID
-			for _, id := range insertedFlagSettings.InsertedIDs {
-				insertedFlagSettingIDs = append(
-					insertedFlagSettingIDs,
-					id.(primitive.ObjectID),
-				)
 			}
 
 			// Update the project with the new flag settings.

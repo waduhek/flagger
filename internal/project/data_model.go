@@ -3,8 +3,6 @@ package project
 import (
 	"context"
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Project struct {
@@ -38,20 +36,20 @@ type DataRepository interface {
 	AddEnvironment(
 		ctx context.Context,
 		projectID string,
-		environmentID primitive.ObjectID,
+		environmentID string,
 	) (uint, error)
 
 	// AddFlag adds a new flag ID to the project by the project ID.
 	AddFlag(
 		ctx context.Context,
 		projectID string,
-		flagID primitive.ObjectID,
+		flagID string,
 	) (uint, error)
 
 	// AddFlagSettings adds new flag setting IDs to the project.
 	AddFlagSettings(
 		ctx context.Context,
-		projectID primitive.ObjectID,
-		flagSettingIDs ...primitive.ObjectID,
+		projectID string,
+		flagSettingIDs ...string,
 	) (uint, error)
 }

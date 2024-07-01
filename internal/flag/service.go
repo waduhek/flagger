@@ -2,11 +2,9 @@ package flag
 
 import (
 	"context"
-	"errors"
 	"log"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/waduhek/flagger/proto/flagpb"
@@ -139,7 +137,7 @@ func (s *Server) handleCreateFlag(
 			flagSettings = append(flagSettings, setting)
 		}
 
-		flagSettingSaveResult, err := s.flagSettingDataRepo.SaveMany(
+		flagSettingIDs, err := s.flagSettingDataRepo.SaveMany(
 			ctx,
 			flagSettings,
 		)
@@ -147,12 +145,6 @@ func (s *Server) handleCreateFlag(
 			log.Printf("error while saving flag settings: %v", err)
 
 			return nil, flagsetting.ErrCouldNotSave
-		}
-
-		// Cast the IDs of the flag settings as ObjectIDs.
-		var flagSettingIDs []primitive.ObjectID
-		for _, id := range flagSettingSaveResult.InsertedIDs {
-			flagSettingIDs = append(flagSettingIDs, id.(primitive.ObjectID))
 		}
 
 		// Add the flag's object ID to the list of flags in the project.
@@ -233,7 +225,7 @@ func (s *Server) UpdateFlagStatus(
 	}
 
 	// Update the flag setting to the desired value.
-	updateResult, err := s.flagSettingDataRepo.UpdateIsActive(
+	updatedCount, err := s.flagSettingDataRepo.UpdateIsActive(
 		ctx,
 		fetchedProject.ID,
 		fetchedEnvironment.ID,
@@ -241,12 +233,10 @@ func (s *Server) UpdateFlagStatus(
 		isActive,
 	)
 	if err != nil {
-		log.Printf("error while updating flag setting: %v", err)
-
-		return nil, flagsetting.ErrStatusUpdate
+		return nil, err
 	}
 
-	if updateResult.ModifiedCount == 0 {
+	if updatedCount == 0 {
 		log.Printf(
 			"no flag settings were updated for project %q, environment %q, flag %q",
 			projectName,

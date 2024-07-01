@@ -148,11 +148,17 @@ func (p *MongoDataRepository) GetByNameAndUserID(
 func (p *MongoDataRepository) AddEnvironment(
 	ctx context.Context,
 	projectID string,
-	environmentID primitive.ObjectID,
+	environmentID string,
 ) (uint, error) {
 	projectIDObjID, projectIDConvertErr := primitive.ObjectIDFromHex(projectID)
 	if projectIDConvertErr != nil {
 		log.Printf("could not convert project ID to ObjectID")
+		return 0, ErrProjectIDConvert
+	}
+
+	environmentIDObjID, environmentIDObjIDErr := primitive.ObjectIDFromHex(environmentID)
+	if environmentIDObjIDErr != nil {
+		log.Printf("could not convert environment id to object id")
 		return 0, ErrProjectIDConvert
 	}
 
@@ -162,7 +168,7 @@ func (p *MongoDataRepository) AddEnvironment(
 	updateQuery := bson.D{
 		{
 			Key:   "$push",
-			Value: bson.D{{Key: "environments", Value: environmentID}},
+			Value: bson.D{{Key: "environments", Value: environmentIDObjID}},
 		},
 		{
 			Key:   "$set",
@@ -187,13 +193,25 @@ func (p *MongoDataRepository) AddEnvironment(
 func (p *MongoDataRepository) AddFlag(
 	ctx context.Context,
 	projectID string,
-	flagID primitive.ObjectID,
+	flagID string,
 ) (uint, error) {
-	filterQuery := bson.D{{Key: "_id", Value: projectID}}
+	projectIDObjID, projectIDObjIDErr := primitive.ObjectIDFromHex(projectID)
+	if projectIDObjIDErr != nil {
+		log.Printf("error while converting project id to object id: %v", projectIDObjIDErr)
+		return 0, ErrAddFlag
+	}
+
+	flagIDObjID, flagIDObjIDErr := primitive.ObjectIDFromHex(flagID)
+	if flagIDObjIDErr != nil {
+		log.Printf("error while converting flag id to object id: %v", flagIDObjIDErr)
+		return 0, ErrAddFlag
+	}
+
+	filterQuery := bson.D{{Key: "_id", Value: projectIDObjID}}
 	updateQuery := bson.D{
 		{
 			Key:   "$push",
-			Value: bson.D{{Key: "flags", Value: flagID}},
+			Value: bson.D{{Key: "flags", Value: flagIDObjID}},
 		},
 		{
 			Key:   "$set",
@@ -217,16 +235,33 @@ func (p *MongoDataRepository) AddFlag(
 func (p *MongoDataRepository) AddFlagSettings(
 	ctx context.Context,
 	projectID string,
-	flagSettingIDs ...primitive.ObjectID,
+	flagSettingIDs ...string,
 ) (uint, error) {
-	filter := bson.D{{Key: "_id", Value: projectID}}
+	projectIDObjID, projectIDObjIDErr := primitive.ObjectIDFromHex(projectID)
+	if projectIDObjIDErr != nil {
+		log.Printf("error while converting project id to object id: %v", projectIDObjIDErr)
+		return 0, ErrAddFlagSetting
+	}
+
+	flagSettingIDObjIDs := make([]primitive.ObjectID, 0, len(flagSettingIDs))
+	for _, flagSettingID := range flagSettingIDs {
+		flagSettingIDObjID, flagSettingIDObjIDErr := primitive.ObjectIDFromHex(flagSettingID)
+		if flagSettingIDObjIDErr != nil {
+			log.Printf("error while converting flag setting id to object id: %v", flagSettingIDObjIDErr)
+			return 0, ErrAddFlagSetting
+		}
+
+		flagSettingIDObjIDs = append(flagSettingIDObjIDs, flagSettingIDObjID)
+	}
+
+	filter := bson.D{{Key: "_id", Value: projectIDObjID}}
 	update := bson.D{
 		{
 			Key: "$push",
 			Value: bson.D{
 				{
 					Key:   "flag_settings",
-					Value: bson.D{{Key: "$each", Value: flagSettingIDs}},
+					Value: bson.D{{Key: "$each", Value: flagSettingIDObjIDs}},
 				},
 			},
 		},
@@ -278,7 +313,7 @@ func setupProjectCollIndexes(
 }
 
 func mapStringSliceToObjectIDs(s []string) ([]primitive.ObjectID, error) {
-	mappedObjectIDs := make([]primitive.ObjectID, len(s))
+	mappedObjectIDs := make([]primitive.ObjectID, 0, len(s))
 
 	for _, id := range s {
 		currentID, err := primitive.ObjectIDFromHex(id)
@@ -293,7 +328,7 @@ func mapStringSliceToObjectIDs(s []string) ([]primitive.ObjectID, error) {
 }
 
 func mapObjectIDsToStringSlice(s []primitive.ObjectID) []string {
-	mappedStrings := make([]string, len(s))
+	mappedStrings := make([]string, 0, len(s))
 
 	for _, id := range s {
 		mappedStrings = append(mappedStrings, id.Hex())
