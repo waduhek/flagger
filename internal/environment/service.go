@@ -130,7 +130,7 @@ func (s *Server) handleCreateEnvrionment(
 			)
 			if flagSettingSaveErr != nil {
 				log.Printf("error while saving flag settings: %v", flagSettingSaveErr)
-				return nil, flagsetting.ErrCouldNotSave
+				return nil, flagSettingSaveErr
 			}
 
 			// Update the project with the new flag settings.

@@ -143,8 +143,7 @@ func (s *Server) handleCreateFlag(
 		)
 		if err != nil {
 			log.Printf("error while saving flag settings: %v", err)
-
-			return nil, flagsetting.ErrCouldNotSave
+			return nil, err
 		}
 
 		// Add the flag's object ID to the list of flags in the project.
