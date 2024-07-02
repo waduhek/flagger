@@ -2,13 +2,24 @@ package user
 
 import (
 	"context"
+	"log"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const userCollection string = "users"
+
+// userMongoModel is the MongoDB representation of the `User` struct.
+type userMongoModel struct {
+	ID       primitive.ObjectID `bson:"_id,omitempty"`
+	Username string             `bson:"username"`
+	Name     string             `bson:"name"`
+	Email    string             `bson:"email"`
+	Password *Password          `bson:"password,inline"`
+}
 
 type MongoDataRepository struct {
 	coll *mongo.Collection
@@ -17,10 +28,32 @@ type MongoDataRepository struct {
 func (u *MongoDataRepository) Save(
 	ctx context.Context,
 	user *User,
-) (*mongo.InsertOneResult, error) {
-	result, err := u.coll.InsertOne(ctx, user)
+) (string, error) {
+	userToAdd := &userMongoModel{
+		Username: user.Username,
+		Name:     user.Name,
+		Email:    user.Email,
+		Password: user.Password,
+	}
 
-	return result, err
+	result, err := u.coll.InsertOne(ctx, userToAdd)
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			log.Printf("a user with username %q already exists", user.Username)
+			return "", ErrUsernameTaken
+		}
+
+		log.Printf("could not save user details: %v", err)
+		return "", ErrNotSaved
+	}
+
+	userID, userIDOk := result.InsertedID.(primitive.ObjectID)
+	if !userIDOk {
+		log.Printf("could not cast mongodb user id as objectid")
+		return "", ErrNotSaved
+	}
+
+	return userID.Hex(), nil
 }
 
 func (u *MongoDataRepository) GetByUsername(
@@ -29,17 +62,29 @@ func (u *MongoDataRepository) GetByUsername(
 ) (*User, error) {
 	query := bson.D{{Key: "username", Value: username}}
 
-	var user User
-	err := u.coll.FindOne(ctx, query).Decode(&user)
+	var decodedUser userMongoModel
+	err := u.coll.FindOne(ctx, query).Decode(&decodedUser)
+	if err != nil {
+		log.Printf("error while fetching user %q: %v", username, err)
+		return nil, ErrCouldNotFetch
+	}
 
-	return &user, err
+	user := &User{
+		ID:       decodedUser.ID.Hex(),
+		Username: decodedUser.Username,
+		Name:     decodedUser.Name,
+		Email:    decodedUser.Email,
+		Password: decodedUser.Password,
+	}
+
+	return user, nil
 }
 
 func (u *MongoDataRepository) UpdatePassword(
 	ctx context.Context,
 	username string,
 	password *Password,
-) (*mongo.UpdateResult, error) {
+) (uint, error) {
 	filter := bson.D{{Key: "username", Value: username}}
 	update := bson.D{{
 		Key: "$set",
@@ -49,7 +94,13 @@ func (u *MongoDataRepository) UpdatePassword(
 		},
 	}}
 
-	return u.coll.UpdateOne(ctx, filter, update)
+	updateResult, updateErr := u.coll.UpdateOne(ctx, filter, update)
+	if updateErr != nil {
+		log.Printf("error while saving new password: %v", updateErr)
+		return 0, ErrPasswordUpdate
+	}
+
+	return uint(updateResult.ModifiedCount), nil
 }
 
 func setupUserCollIndexes(ctx context.Context, coll *mongo.Collection) error {

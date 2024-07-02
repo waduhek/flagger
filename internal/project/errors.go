@@ -74,3 +74,10 @@ var ErrKeyMetadataLength = status.Error(
 	codes.InvalidArgument,
 	"invalid length of project key metadata",
 )
+
+// ErrProjectIDConvert is a GRPC error that is returned when the project ID
+// could not be converted to the expected type.
+var ErrProjectIDConvert = status.Error(
+	codes.Internal,
+	"could not convert project ID to expected type",
+)

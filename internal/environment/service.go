@@ -2,11 +2,9 @@ package environment
 
 import (
 	"context"
-	"errors"
 	"log"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/waduhek/flagger/proto/environmentpb"
@@ -40,8 +38,7 @@ func (s *Server) CreateEnvironment(
 
 	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
-		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ErrCouldNotFetch
+		return nil, err
 	}
 
 	projectName := req.GetProjectName()
@@ -54,17 +51,7 @@ func (s *Server) CreateEnvironment(
 		fetchedUser.ID,
 	)
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			log.Printf(
-				"no projects were found with name %q with user %q",
-				projectName,
-				username,
-			)
-			return nil, project.ErrNotFound
-		}
-
-		log.Printf("error occurred while fetching projects: %v", err)
-		return nil, project.ErrCouldNotFetch
+		return nil, err
 	}
 
 	// Create a session that will initiate a transaction to save the details of
@@ -114,30 +101,9 @@ func (s *Server) handleCreateEnvrionment(
 			CreatedAt: time.Now(),
 		}
 
-		envResult, envSaveErr := s.environmentDataRepo.Save(ctx, &newEnvironment)
+		environmentID, envSaveErr := s.environmentDataRepo.Save(ctx, &newEnvironment)
 		if envSaveErr != nil {
-			if mongo.IsDuplicateKeyError(envSaveErr) {
-				log.Printf(
-					"an environment %q already exists for project %q",
-					environmentName,
-					fetchedProject.Name,
-				)
-				return nil, ErrNameTaken
-			}
-
-			log.Printf(
-				"could not create environment %q for project %q",
-				environmentName,
-				fetchedProject.ID,
-			)
-			return nil, ErrCouldNotSave
-		}
-
-		// Cast the returned ID of the inserted environment as an ObjectID.
-		environmentID, ok := envResult.InsertedID.(primitive.ObjectID)
-		if !ok {
-			log.Printf("environment ID is not of type ObjectID")
-			return nil, ErrEnvironmentIDCast
+			return nil, envSaveErr
 		}
 
 		// Create new flag settings for all the flags that are present in the
@@ -158,22 +124,13 @@ func (s *Server) handleCreateEnvrionment(
 
 		// Save the flag settings to the collection.
 		if len(flagSettings) > 0 {
-			insertedFlagSettings, flagSettingSaveErr := s.flagSettingDataRepo.SaveMany(
+			insertedFlagSettingIDs, flagSettingSaveErr := s.flagSettingDataRepo.SaveMany(
 				ctx,
 				flagSettings,
 			)
 			if flagSettingSaveErr != nil {
 				log.Printf("error while saving flag settings: %v", flagSettingSaveErr)
-				return nil, flagsetting.ErrCouldNotSave
-			}
-
-			// Cast the IDs of all the flag settings as ObjectIDs.
-			var insertedFlagSettingIDs []primitive.ObjectID
-			for _, id := range insertedFlagSettings.InsertedIDs {
-				insertedFlagSettingIDs = append(
-					insertedFlagSettingIDs,
-					id.(primitive.ObjectID),
-				)
+				return nil, flagSettingSaveErr
 			}
 
 			// Update the project with the new flag settings.
@@ -183,11 +140,7 @@ func (s *Server) handleCreateEnvrionment(
 				insertedFlagSettingIDs...,
 			)
 			if projectFlagSettingErr != nil {
-				log.Printf(
-					"error while updating project with flag settings: %v",
-					projectFlagSettingErr,
-				)
-				return nil, project.ErrAddFlagSetting
+				return nil, projectFlagSettingErr
 			}
 		}
 
@@ -198,13 +151,7 @@ func (s *Server) handleCreateEnvrionment(
 			environmentID,
 		)
 		if projectUpdateErr != nil {
-			log.Printf(
-				"error while adding environment %q to project %q: %v",
-				environmentID,
-				fetchedProject.ID,
-				projectUpdateErr,
-			)
-			return nil, project.ErrAddEnvironment
+			return nil, projectUpdateErr
 		}
 
 		return nil, nil

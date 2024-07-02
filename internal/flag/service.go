@@ -2,11 +2,9 @@ package flag
 
 import (
 	"context"
-	"errors"
 	"log"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/waduhek/flagger/proto/flagpb"
@@ -45,8 +43,7 @@ func (s *Server) CreateFlag(
 
 	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
-		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ErrCouldNotFetch
+		return nil, err
 	}
 
 	projectName := req.GetProjectName()
@@ -61,18 +58,7 @@ func (s *Server) CreateFlag(
 		fetchedUser.ID,
 	)
 	if err != nil {
-		log.Printf(
-			"error while getting project %q with user %q: %v",
-			projectName,
-			username,
-			err,
-		)
-
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, project.ErrNotFound
-		}
-
-		return nil, project.ErrCouldNotFetch
+		return nil, err
 	}
 
 	// If there are no environments configured for the project, don't allow any
@@ -126,19 +112,10 @@ func (s *Server) handleCreateFlag(
 			CreatedAt: time.Now(),
 		}
 
-		flagSaveResult, err := s.flagDataRepo.Save(ctx, newFlag)
+		savedFlagID, err := s.flagDataRepo.Save(ctx, newFlag)
 		if err != nil {
-			log.Printf("error while saving the flag: %v", err)
-
-			if mongo.IsDuplicateKeyError(err) {
-				return nil, ErrNameTaken
-			}
-
-			return nil, ErrCouldNotSave
+			return nil, err
 		}
-
-		// Cast the returned ID of the saved flag as an ObjectID.
-		savedFlagID, _ := flagSaveResult.InsertedID.(primitive.ObjectID)
 
 		// Get all the environments that the project has.
 		projectEnvIDs := fetchedProject.Environments
@@ -160,20 +137,13 @@ func (s *Server) handleCreateFlag(
 			flagSettings = append(flagSettings, setting)
 		}
 
-		flagSettingSaveResult, err := s.flagSettingDataRepo.SaveMany(
+		flagSettingIDs, err := s.flagSettingDataRepo.SaveMany(
 			ctx,
 			flagSettings,
 		)
 		if err != nil {
 			log.Printf("error while saving flag settings: %v", err)
-
-			return nil, flagsetting.ErrCouldNotSave
-		}
-
-		// Cast the IDs of the flag settings as ObjectIDs.
-		var flagSettingIDs []primitive.ObjectID
-		for _, id := range flagSettingSaveResult.InsertedIDs {
-			flagSettingIDs = append(flagSettingIDs, id.(primitive.ObjectID))
+			return nil, err
 		}
 
 		// Add the flag's object ID to the list of flags in the project.
@@ -183,12 +153,7 @@ func (s *Server) handleCreateFlag(
 			savedFlagID,
 		)
 		if projectFlagUpdateErr != nil {
-			log.Printf(
-				"error while updating project with the flag: %v",
-				projectFlagUpdateErr,
-			)
-
-			return nil, project.ErrAddFlag
+			return nil, projectFlagUpdateErr
 		}
 
 		// Add all the object IDs of the flag settings to the project.
@@ -198,12 +163,7 @@ func (s *Server) handleCreateFlag(
 			flagSettingIDs...,
 		)
 		if projectSettingErr != nil {
-			log.Printf(
-				"error while updating project with flag settings: %v",
-				projectSettingErr,
-			)
-
-			return nil, project.ErrAddFlagSetting
+			return nil, projectSettingErr
 		}
 
 		return nil, nil
@@ -225,8 +185,7 @@ func (s *Server) UpdateFlagStatus(
 
 	fetchedUser, err := s.userDataRepo.GetByUsername(ctx, username)
 	if err != nil {
-		log.Printf("error while fetching user %q: %v", username, err)
-		return nil, user.ErrCouldNotFetch
+		return nil, err
 	}
 
 	projectName := req.GetProjectName()
@@ -241,13 +200,7 @@ func (s *Server) UpdateFlagStatus(
 		fetchedUser.ID,
 	)
 	if err != nil {
-		log.Printf("error while fetching project %q: %v", projectName, err)
-
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, project.ErrNotFound
-		}
-
-		return nil, project.ErrCouldNotFetch
+		return nil, err
 	}
 
 	// Get the environment that is to be updated.
@@ -257,17 +210,7 @@ func (s *Server) UpdateFlagStatus(
 		fetchedProject.ID,
 	)
 	if err != nil {
-		log.Printf(
-			"error while fetching environment %q: %v",
-			environmentName,
-			err,
-		)
-
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, environment.ErrNotFound
-		}
-
-		return nil, environment.ErrCouldNotFetch
+		return nil, err
 	}
 
 	// Get the flag to update.
@@ -277,17 +220,11 @@ func (s *Server) UpdateFlagStatus(
 		fetchedProject.ID,
 	)
 	if err != nil {
-		log.Printf("error while fetching flag %q: %v", flagName, err)
-
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, ErrNotFound
-		}
-
-		return nil, ErrCouldNotFetch
+		return nil, err
 	}
 
 	// Update the flag setting to the desired value.
-	updateResult, err := s.flagSettingDataRepo.UpdateIsActive(
+	updatedCount, err := s.flagSettingDataRepo.UpdateIsActive(
 		ctx,
 		fetchedProject.ID,
 		fetchedEnvironment.ID,
@@ -295,12 +232,10 @@ func (s *Server) UpdateFlagStatus(
 		isActive,
 	)
 	if err != nil {
-		log.Printf("error while updating flag setting: %v", err)
-
-		return nil, flagsetting.ErrStatusUpdate
+		return nil, err
 	}
 
-	if updateResult.ModifiedCount == 0 {
+	if updatedCount == 0 {
 		log.Printf(
 			"no flag settings were updated for project %q, environment %q, flag %q",
 			projectName,
