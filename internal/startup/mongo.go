@@ -11,12 +11,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const mongoDBConnectionStringFile string = "/etc/flagger-mongodb/connectionString.standard"
-
 // ConnectMongo establishes a connection with the MongoDB database cluster and
 // returns the client.
 func ConnectMongo() (*mongo.Client, error) {
-	return connectMongoWithFile(mongoDBConnectionStringFile)
+	filePath := os.Getenv("FLAGGER_MONGODB_CONN_FILE_PATH")
+
+	return connectMongoWithFile(filePath)
 }
 
 func connectMongoWithFile(filePath string) (*mongo.Client, error) {
