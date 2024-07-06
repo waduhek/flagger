@@ -1,13 +1,16 @@
-//go:build integrationtest
+package startup_test
 
-package startup
+import (
+	"testing"
 
-import "testing"
+	"github.com/waduhek/flagger/internal/startup"
+)
 
 func TestSuccessfulRedisConnection(t *testing.T) {
 	const connectionString string = "redis://localhost:6379/0"
+	t.Setenv("FLAGGER_REDIS_URI", connectionString)
 
-	_, err := connectRedisWithConnectionString(connectionString)
+	_, err := startup.ConnectRedis()
 	if err != nil {
 		t.Errorf("did not expect error when connecting to redis: %v", err)
 	}
@@ -15,8 +18,9 @@ func TestSuccessfulRedisConnection(t *testing.T) {
 
 func TestUnsuccessfulRedisConnection(t *testing.T) {
 	const connectionString = "http://example.com"
+	t.Setenv("FLAGGER_REDIS_URI", connectionString)
 
-	_, err := connectRedisWithConnectionString(connectionString)
+	_, err := startup.ConnectRedis()
 	if err == nil {
 		t.Error("expected error when connecting to redis")
 	}

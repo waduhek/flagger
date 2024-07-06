@@ -38,7 +38,7 @@ wait_for_container $mongo_container_name
 wait_for_container $redis_container_name
 
 # Run tests.
-go test -tags=integrationtest ./...
+go test ./...
 
 # Stop and remove the MongoDB container.
 force_stop_container $mongo_container_name

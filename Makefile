@@ -31,14 +31,7 @@ build-dev:
 # --- Testing and benchmarking targets ---
 .PHONY: test
 test:
-	go test ./...
-
-.PHONY: integration-test
-integration-test:
-	./scripts/run-integration-tests.sh
-
-.PHONY: test-all
-test-all: test integration-test
+	./scripts/run-tests.sh
 
 .PHONY: bench
 bench:
