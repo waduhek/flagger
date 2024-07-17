@@ -7,3 +7,6 @@ build
 
 # Miscellaneous files and directory
 .DS_Store
+
+# Test output
+cover.out
