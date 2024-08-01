@@ -19,7 +19,6 @@ const mongoDBConnectionString string = "mongodb://localhost:27017"
 
 const dummyObjectID string = "66a4836693cca0acf7482f8b"
 
-//nolint:gochecknoglobals // Only to be used to create an environment.
 var dummyEnvironmentStruct = &environment.Environment{
 	Name:      "test",
 	ProjectID: dummyObjectID,
@@ -27,10 +26,8 @@ var dummyEnvironmentStruct = &environment.Environment{
 	CreatedAt: time.Now(),
 }
 
-//nolint:gochecknoglobals // Initialised only in TestMain function.
 var environmentCollection *mongo.Collection
 
-//nolint:gochecknoglobals // Initialised only in TestMain function.
 var environmentRepository environment.DataRepository
 
 func TestSaveEnvironment(t *testing.T) {
