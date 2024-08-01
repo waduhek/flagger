@@ -119,7 +119,18 @@ func (r *MongoDataRepository) GetByNameAndProjectID(
 
 	err := r.coll.FindOne(ctx, query).Decode(&decodedEnvironment)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			log.Printf(
+				"no environment with the environment name %v and project ID %v: %v",
+				environmentName,
+				projectID,
+				err,
+			)
+			return nil, ErrNotFound
+		}
+
+		log.Printf("error occurred while fetching environment: %v", err)
+		return nil, ErrCouldNotFetch
 	}
 
 	return mapMongoModelToStruct(&decodedEnvironment), nil
