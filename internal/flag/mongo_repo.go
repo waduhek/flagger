@@ -86,7 +86,12 @@ func (r *MongoDataRepository) GetByID(
 
 	err := r.coll.FindOne(ctx, query).Decode(&decodedFlag)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			log.Printf("flag not found with id %v", flagID)
+			return nil, ErrNotFound
+		}
+
+		return nil, ErrCouldNotFetch
 	}
 
 	return mapDecodedFlag(&decodedFlag), nil
