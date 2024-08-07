@@ -12,7 +12,11 @@ redis_container_port=6379
 # $2 Port to publish.
 # $3 Name of the image to run.
 run_docker_container () {
-    docker run --quiet --detach --name "$1" --publish "$2" "$3" >/dev/null 2>&1
+    if ! docker run --quiet --detach --name "$1" --publish "$2" "$3" >/dev/null 2>&1
+    then
+        echo "Error while starting container with name $1"
+        exit 1
+    fi
 }
 
 # Gets the IP address of a container
