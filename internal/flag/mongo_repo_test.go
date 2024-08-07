@@ -20,7 +20,7 @@ const mongoDBConnectionString string = "mongodb://localhost:27017"
 const dummyObjectID string = "66a4836693cca0acf7482f8b"
 
 var dummyFlag = &flag.Flag{
-	Name: "test",
+	Name:      "test",
 	ProjectID: dummyObjectID,
 	CreatedBy: dummyObjectID,
 	CreatedAt: time.Now(),
@@ -45,14 +45,14 @@ func TestSave(t *testing.T) {
 func TestSave_InvalidID(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct{
+	testCases := []struct {
 		Name string
 		Flag *flag.Flag
 	}{
 		{
 			Name: "invalid_project_id",
 			Flag: &flag.Flag{
-				Name: "test_invalid_project_id",
+				Name:      "test_invalid_project_id",
 				ProjectID: "invalid_object_id",
 				CreatedBy: dummyObjectID,
 				CreatedAt: time.Now(),
@@ -61,7 +61,7 @@ func TestSave_InvalidID(t *testing.T) {
 		{
 			Name: "invalid_created_by",
 			Flag: &flag.Flag{
-				Name: "test_invalid_object_id",
+				Name:      "test_invalid_object_id",
 				ProjectID: dummyObjectID,
 				CreatedBy: "invalid_object_id",
 				CreatedAt: time.Now(),
@@ -133,7 +133,7 @@ func TestGetByID_InvalidFlagID(t *testing.T) {
 }
 
 func TestGetByID_NoFlag(t *testing.T) {
-	ctx, cancel :=context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	_, getErr := flagRepository.GetByID(ctx, dummyObjectID)
@@ -256,7 +256,7 @@ func cleanupFlag(t *testing.T, flag *flag.Flag) {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
 
-		flagCollection.DeleteOne(
+		_, _ = flagCollection.DeleteOne(
 			ctx,
 			bson.D{{Key: "name", Value: flag.Name}},
 		)
