@@ -137,19 +137,19 @@ func (r *MongoDataRepository) Get(
 	projectIDObjID, projectIDErr := primitive.ObjectIDFromHex(projectID)
 	if projectIDErr != nil {
 		log.Printf("could not convert project id to object id: %v", projectIDErr)
-		return nil, ErrCouldNotSave // TODO: Error
+		return nil, ErrCouldNotGet
 	}
 
 	environmentIDObjID, environmentIDErr := primitive.ObjectIDFromHex(environmentID)
 	if environmentIDErr != nil {
 		log.Printf("could not convert environment id to object id: %v", environmentIDErr)
-		return nil, ErrCouldNotSave // TODO: Error
+		return nil, ErrCouldNotGet
 	}
 
 	flagIDObjID, flagIDErr := primitive.ObjectIDFromHex(flagID)
 	if flagIDErr != nil {
 		log.Printf("could not convert flag id to object id: %v", flagIDErr)
-		return nil, ErrCouldNotSave // TODO: Error
+		return nil, ErrCouldNotGet
 	}
 
 	query := bson.D{
@@ -188,19 +188,19 @@ func (r *MongoDataRepository) UpdateIsActive(
 	projectIDObjID, projectIDErr := primitive.ObjectIDFromHex(projectID)
 	if projectIDErr != nil {
 		log.Printf("could not convert project id to object id: %v", projectIDErr)
-		return 0, ErrCouldNotSave // TODO: Error
+		return 0, ErrStatusUpdate
 	}
 
 	environmentIDObjID, environmentIDErr := primitive.ObjectIDFromHex(environmentID)
 	if environmentIDErr != nil {
 		log.Printf("could not convert environment id to object id: %v", environmentIDErr)
-		return 0, ErrCouldNotSave // TODO: Error
+		return 0, ErrStatusUpdate
 	}
 
 	flagIDObjID, flagIDErr := primitive.ObjectIDFromHex(flagID)
 	if flagIDErr != nil {
 		log.Printf("could not convert flag id to object id: %v", flagIDErr)
-		return 0, ErrCouldNotSave // TODO: Error
+		return 0, ErrStatusUpdate
 	}
 
 	filter := bson.D{
