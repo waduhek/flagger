@@ -213,19 +213,19 @@ func TestAddEnvironment(t *testing.T) {
 func TestAddEnvironment_InvalidIDs(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct{
-		Name string
-		ProjectID string
+	testCases := []struct {
+		Name          string
+		ProjectID     string
 		EnvironmentID string
 	}{
 		{
-			Name: "invalid_project_id",
-			ProjectID: "invalid_object_id",
+			Name:          "invalid_project_id",
+			ProjectID:     "invalid_object_id",
 			EnvironmentID: dummyObjectID,
 		},
 		{
-			Name: "invalid_environment_id",
-			ProjectID: dummyObjectID,
+			Name:          "invalid_environment_id",
+			ProjectID:     dummyObjectID,
 			EnvironmentID: "invalid_environment_id",
 		},
 	}
@@ -269,20 +269,20 @@ func TestAddFlag(t *testing.T) {
 func TestAddFlag_InvalidIDs(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct{
-		Name string
+	testCases := []struct {
+		Name      string
 		ProjectID string
-		FlagID string
+		FlagID    string
 	}{
 		{
-			Name: "invalid_project_id",
+			Name:      "invalid_project_id",
 			ProjectID: "invalid_object_id",
-			FlagID: dummyObjectID,
+			FlagID:    dummyObjectID,
 		},
 		{
-			Name: "invalid_environment_id",
+			Name:      "invalid_environment_id",
 			ProjectID: dummyObjectID,
-			FlagID: "invalid_environment_id",
+			FlagID:    "invalid_environment_id",
 		},
 	}
 	for _, testCase := range testCases {
@@ -320,19 +320,19 @@ func TestAddFlagSettings(t *testing.T) {
 func TestAddFlagSettings_InvalidIDs(t *testing.T) {
 	t.Parallel()
 
-	testCases := []struct{
-		Name string
-		ProjectID string
+	testCases := []struct {
+		Name           string
+		ProjectID      string
 		FlagSettingIDs []string
 	}{
 		{
-			Name: "invalid_project_id",
-			ProjectID: "invalid_object_id",
+			Name:           "invalid_project_id",
+			ProjectID:      "invalid_object_id",
 			FlagSettingIDs: []string{dummyObjectID},
 		},
 		{
-			Name: "invalid_environment_id",
-			ProjectID: dummyObjectID,
+			Name:           "invalid_environment_id",
+			ProjectID:      dummyObjectID,
 			FlagSettingIDs: []string{"invalid_environment_id"},
 		},
 	}
