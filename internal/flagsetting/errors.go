@@ -12,6 +12,13 @@ var ErrCouldNotSave = status.Error(
 	"could not save flag settings",
 )
 
+// ErrCouldNotGet is a GRPC error that is returned when the current status of
+// the flag could be retrieved.
+var ErrCouldNotGet = status.Error(
+	codes.Internal,
+	"could not get flag setting",
+)
+
 // ErrStatusUpdate is a GRPC error that is returned when an error occurs while
 // updating the flag settings status.
 var ErrStatusUpdate = status.Error(
