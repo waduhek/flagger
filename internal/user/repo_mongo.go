@@ -100,6 +100,7 @@ func (u *MongoDataRepository) UpdatePassword(
 		return 0, ErrPasswordUpdate
 	}
 
+	//nolint:gosec // ModifiedCount can't be a negative number.
 	return uint(updateResult.ModifiedCount), nil
 }
 

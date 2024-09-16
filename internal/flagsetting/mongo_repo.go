@@ -219,6 +219,7 @@ func (r *MongoDataRepository) UpdateIsActive(
 		return 0, ErrStatusUpdate
 	}
 
+	//nolint:gosec // ModifiedCount can't be a negative number.
 	return uint(updateResult.ModifiedCount), nil
 }
 
