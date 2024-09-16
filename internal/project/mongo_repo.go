@@ -187,6 +187,7 @@ func (p *MongoDataRepository) AddEnvironment(
 		return 0, ErrAddEnvironment
 	}
 
+	//nolint:gosec // ModifiedCount can't be a negative number.
 	return uint(updateResult.ModifiedCount), nil
 }
 
@@ -229,6 +230,7 @@ func (p *MongoDataRepository) AddFlag(
 		return 0, ErrAddFlag
 	}
 
+	//nolint:gosec // ModifiedCount can't be a negative number.
 	return uint(updateResult.ModifiedCount), nil
 }
 
@@ -280,6 +282,7 @@ func (p *MongoDataRepository) AddFlagSettings(
 		return 0, ErrAddFlagSetting
 	}
 
+	//nolint:gosec // ModifiedCount can't be a negative number.
 	return uint(updateResult.ModifiedCount), nil
 }
 
