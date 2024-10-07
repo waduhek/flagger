@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/redis/go-redis/v9 v9.6.1
-	go.mongodb.org/mongo-driver v1.17.0
+	go.mongodb.org/mongo-driver v1.17.1
 	golang.org/x/crypto v0.27.0
 	google.golang.org/grpc v1.67.0
 	google.golang.org/protobuf v1.34.2
