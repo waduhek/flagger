@@ -9,7 +9,7 @@ require (
 	github.com/redis/go-redis/v9 v9.7.0
 	go.mongodb.org/mongo-driver v1.17.1
 	golang.org/x/crypto v0.31.0
-	google.golang.org/grpc v1.69.0
+	google.golang.org/grpc v1.69.2
 	google.golang.org/protobuf v1.35.2
 )
 
