@@ -74,7 +74,7 @@ func TestVerifyPasswordHash(t *testing.T) {
 func BenchmarkGeneratePasswordHash(b *testing.B) {
 	password := "this_is anUnsualLY l0ng_and_stong p@a$$w0Rd!"
 
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		_, err := hash.GeneratePasswordHash(password)
 		if err != nil {
 			b.Errorf("hashing failed at i=%d", i)
@@ -95,7 +95,7 @@ func BenchmarkVerifyPasswordHash(b *testing.B) {
 	}
 	plain := "this_is anUnsualLY l0ng_and_stong p@a$$w0Rd!"
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		hash.VerifyPasswordHash(plain, expectedHash, salt)
 	}
 }
