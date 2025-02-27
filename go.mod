@@ -1,14 +1,14 @@
 module github.com/waduhek/flagger
 
-go 1.22.7
+go 1.23.0
 
-toolchain go1.23.3
+toolchain go1.24.0
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/redis/go-redis/v9 v9.7.1
 	go.mongodb.org/mongo-driver v1.17.2
-	golang.org/x/crypto v0.33.0
+	golang.org/x/crypto v0.34.0
 	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.5
 )
