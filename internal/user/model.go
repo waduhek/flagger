@@ -9,7 +9,7 @@ type Password struct {
 	Salt []byte `bson:"salt" json:"salt"`
 }
 
-// The details of the user.
+// User represents the details of a user.
 type User struct {
 	ID       string
 	Name     string
