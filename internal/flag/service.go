@@ -84,7 +84,7 @@ func (s *Server) CreateFlag(
 	)
 	if txnErr != nil {
 		log.Printf("could not complete flag save transaction: %v", err)
-		return nil, err
+		return nil, txnErr
 	}
 
 	log.Printf(

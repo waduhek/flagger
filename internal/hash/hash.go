@@ -40,7 +40,7 @@ func generateRandomSalt() ([]byte, error) {
 	return salt, nil
 }
 
-// generatePasswordHash hashes the provided password returning the hash
+// GeneratePasswordHash hashes the provided password returning the hash
 // generated and the random salt that was used for hashing the password.
 func GeneratePasswordHash(password string) (PasswordHashDetails, error) {
 	salt, err := generateRandomSalt()
@@ -60,7 +60,7 @@ func GeneratePasswordHash(password string) (PasswordHashDetails, error) {
 	return PasswordHashDetails{Hash: passwordHash, Salt: salt}, nil
 }
 
-// verifyPasswordHash verifies the provided plain text password to verify if the
+// VerifyPasswordHash verifies the provided plain text password to verify if the
 // provided plain text password generates a hash that will match the expected
 // hash.
 func VerifyPasswordHash(plainPassword string, expectedHash []byte, salt []byte) bool {
