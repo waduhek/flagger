@@ -3,7 +3,6 @@ package project
 import (
 	"context"
 	"errors"
-	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -11,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/waduhek/flagger/internal/logger"
 	"github.com/waduhek/flagger/internal/user"
 )
 
@@ -30,7 +30,8 @@ type projectMongoModel struct {
 }
 
 type MongoDataRepository struct {
-	coll *mongo.Collection
+	coll   *mongo.Collection
+	logger logger.Logger
 }
 
 func (p *MongoDataRepository) Save(
@@ -40,26 +41,26 @@ func (p *MongoDataRepository) Save(
 	mappedEnvironmentIDs, mapEnvironmentIDErr :=
 		mapStringSliceToObjectIDs(project.Environments)
 	if mapEnvironmentIDErr != nil {
-		log.Printf("could not map environment ids to object ids: %v", mapEnvironmentIDErr)
+		p.logger.Error("could not map environment ids to object ids: %v", mapEnvironmentIDErr)
 		return "", ErrCouldNotSave
 	}
 
 	mappedFlagIDs, mapFlagIDErr := mapStringSliceToObjectIDs(project.Flags)
 	if mapFlagIDErr != nil {
-		log.Printf("could not map flag ids to object ids: %v", mapFlagIDErr)
+		p.logger.Error("could not map flag ids to object ids: %v", mapFlagIDErr)
 		return "", ErrCouldNotSave
 	}
 
 	mappedFlagSettingIDs, mapFlagSettingIDErr :=
 		mapStringSliceToObjectIDs(project.FlagSettings)
 	if mapFlagSettingIDErr != nil {
-		log.Printf("could not map flag setting ids to object ids: %v", mapFlagSettingIDErr)
+		p.logger.Error("could not map flag setting ids to object ids: %v", mapFlagSettingIDErr)
 		return "", ErrCouldNotSave
 	}
 
 	createdByObjID, createdByObjIDErr := primitive.ObjectIDFromHex(project.CreatedBy)
 	if createdByObjIDErr != nil {
-		log.Printf("could not convert created by to object id: %v", createdByObjIDErr)
+		p.logger.Error("could not convert created by to object id: %v", createdByObjIDErr)
 		return "", ErrCouldNotSave
 	}
 
@@ -77,20 +78,20 @@ func (p *MongoDataRepository) Save(
 	saveResult, saveErr := p.coll.InsertOne(ctx, projectToAdd)
 	if saveErr != nil {
 		if mongo.IsDuplicateKeyError(saveErr) {
-			log.Printf(
+			p.logger.Error(
 				"a project with name %q exists",
 				project.Name,
 			)
 			return "", ErrNameTaken
 		}
 
-		log.Printf("error occurred while saving project: %v", saveErr)
+		p.logger.Error("error occurred while saving project: %v", saveErr)
 		return "", ErrCouldNotSave
 	}
 
 	projectID, ok := saveResult.InsertedID.(primitive.ObjectID)
 	if !ok {
-		log.Printf("could not assert saved project id as object id")
+		p.logger.Error("could not assert saved project id as object id")
 		return "", ErrCouldNotSave
 	}
 
@@ -104,7 +105,7 @@ func (p *MongoDataRepository) GetByNameAndUserID(
 ) (*Project, error) {
 	userIDObjectID, userIDErr := primitive.ObjectIDFromHex(userID)
 	if userIDErr != nil {
-		log.Printf("could not convert user ID to ObjectID")
+		p.logger.Error("could not convert user ID to ObjectID")
 		return nil, user.ErrUserIDConvert
 	}
 
@@ -116,7 +117,7 @@ func (p *MongoDataRepository) GetByNameAndUserID(
 	var decodedProject projectMongoModel
 	findErr := p.coll.FindOne(ctx, query).Decode(&decodedProject)
 	if findErr != nil {
-		log.Printf(
+		p.logger.Error(
 			"error while getting project %q with user %q: %v",
 			projectName,
 			userID,
@@ -152,13 +153,13 @@ func (p *MongoDataRepository) AddEnvironment(
 ) (uint, error) {
 	projectIDObjID, projectIDConvertErr := primitive.ObjectIDFromHex(projectID)
 	if projectIDConvertErr != nil {
-		log.Printf("could not convert project ID to ObjectID")
+		p.logger.Error("could not convert project ID to ObjectID")
 		return 0, ErrProjectIDConvert
 	}
 
 	environmentIDObjID, environmentIDObjIDErr := primitive.ObjectIDFromHex(environmentID)
 	if environmentIDObjIDErr != nil {
-		log.Printf("could not convert environment id to object id")
+		p.logger.Error("could not convert environment id to object id")
 		return 0, ErrProjectIDConvert
 	}
 
@@ -178,7 +179,7 @@ func (p *MongoDataRepository) AddEnvironment(
 
 	updateResult, updateErr := p.coll.UpdateOne(ctx, filterQuery, updateQuery)
 	if updateErr != nil {
-		log.Printf(
+		p.logger.Error(
 			"error while adding environment %q to project %q: %v",
 			environmentID,
 			projectIDObjID,
@@ -198,13 +199,13 @@ func (p *MongoDataRepository) AddFlag(
 ) (uint, error) {
 	projectIDObjID, projectIDObjIDErr := primitive.ObjectIDFromHex(projectID)
 	if projectIDObjIDErr != nil {
-		log.Printf("error while converting project id to object id: %v", projectIDObjIDErr)
+		p.logger.Error("error while converting project id to object id: %v", projectIDObjIDErr)
 		return 0, ErrAddFlag
 	}
 
 	flagIDObjID, flagIDObjIDErr := primitive.ObjectIDFromHex(flagID)
 	if flagIDObjIDErr != nil {
-		log.Printf("error while converting flag id to object id: %v", flagIDObjIDErr)
+		p.logger.Error("error while converting flag id to object id: %v", flagIDObjIDErr)
 		return 0, ErrAddFlag
 	}
 
@@ -222,7 +223,7 @@ func (p *MongoDataRepository) AddFlag(
 
 	updateResult, updateErr := p.coll.UpdateOne(ctx, filterQuery, updateQuery)
 	if updateErr != nil {
-		log.Printf(
+		p.logger.Error(
 			"error while updating project with the flag: %v",
 			updateErr,
 		)
@@ -241,7 +242,7 @@ func (p *MongoDataRepository) AddFlagSettings(
 ) (uint, error) {
 	projectIDObjID, projectIDObjIDErr := primitive.ObjectIDFromHex(projectID)
 	if projectIDObjIDErr != nil {
-		log.Printf("error while converting project id to object id: %v", projectIDObjIDErr)
+		p.logger.Error("error while converting project id to object id: %v", projectIDObjIDErr)
 		return 0, ErrAddFlagSetting
 	}
 
@@ -249,7 +250,7 @@ func (p *MongoDataRepository) AddFlagSettings(
 	for _, flagSettingID := range flagSettingIDs {
 		flagSettingIDObjID, flagSettingIDObjIDErr := primitive.ObjectIDFromHex(flagSettingID)
 		if flagSettingIDObjIDErr != nil {
-			log.Printf("error while converting flag setting id to object id: %v", flagSettingIDObjIDErr)
+			p.logger.Error("error while converting flag setting id to object id: %v", flagSettingIDObjIDErr)
 			return 0, ErrAddFlagSetting
 		}
 
@@ -275,7 +276,7 @@ func (p *MongoDataRepository) AddFlagSettings(
 
 	updateResult, updateErr := p.coll.UpdateOne(ctx, filter, update)
 	if updateErr != nil {
-		log.Printf(
+		p.logger.Error(
 			"error while updating project with flag settings: %v",
 			updateErr,
 		)
@@ -343,6 +344,7 @@ func mapObjectIDsToStringSlice(s []primitive.ObjectID) []string {
 func NewProjectRepository(
 	ctx context.Context,
 	db *mongo.Database,
+	logger logger.Logger,
 ) (*MongoDataRepository, error) {
 	coll := db.Collection(ProjectCollection)
 
@@ -351,5 +353,5 @@ func NewProjectRepository(
 		return nil, err
 	}
 
-	return &MongoDataRepository{coll}, nil
+	return &MongoDataRepository{coll, logger}, nil
 }

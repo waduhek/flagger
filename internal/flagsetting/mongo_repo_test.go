@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/waduhek/flagger/internal/flagsetting"
+	"github.com/waduhek/flagger/internal/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -346,7 +347,11 @@ func getFlagSettingRepository(mongoDatabase *mongo.Database) (flagsetting.DataRe
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	flagRepository, repositoryErr := flagsetting.NewFlagSettingRepository(ctx, mongoDatabase)
+	flagRepository, repositoryErr := flagsetting.NewFlagSettingRepository(
+		ctx,
+		mongoDatabase,
+		&logger.StubLogger{},
+	)
 	if repositoryErr != nil {
 		return nil, repositoryErr
 	}

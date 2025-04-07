@@ -2,9 +2,10 @@ package project
 
 import (
 	"context"
-	"log"
 
 	"google.golang.org/grpc/metadata"
+
+	"github.com/waduhek/flagger/internal/logger"
 )
 
 // projectTokenMetadataKey is the metadata key for the incoming request
@@ -17,21 +18,24 @@ const projectTokenMetadataKey = "x-flagger-token"
 // token is present in the incoming context. If the project token exists, it
 // adds the token to the returned context. All errors returned by this function
 // are GRPC compliant.
-func AuthoriseProject(ctx context.Context) (context.Context, error) {
+func AuthoriseProject(
+	ctx context.Context,
+	logger logger.Logger,
+) (context.Context, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		log.Println("could not find message metadata")
+		logger.Error("could not find message metadata")
 		return nil, ErrMetadataNotFound
 	}
 
 	projectTokens, ok := md[projectTokenMetadataKey]
 	if !ok {
-		log.Println("could not find the project token")
+		logger.Error("could not find the project token")
 		return nil, ErrProjectKeyNotFound
 	}
 
 	if len(projectTokens) != 1 {
-		log.Println("multiple project tokens found in metadata")
+		logger.Error("multiple project tokens found in metadata")
 		return nil, ErrKeyMetadataLength
 	}
 

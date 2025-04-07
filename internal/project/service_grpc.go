@@ -2,11 +2,11 @@ package project
 
 import (
 	"context"
-	"log"
 
 	"github.com/waduhek/flagger/proto/projectpb"
 
 	"github.com/waduhek/flagger/internal/auth"
+	"github.com/waduhek/flagger/internal/logger"
 	"github.com/waduhek/flagger/internal/user"
 )
 
@@ -20,6 +20,7 @@ type Server struct {
 	projectpb.UnimplementedProjectServer
 	projectDataRepo DataRepository
 	userDataRepo    user.DataRepository
+	logger          logger.Logger
 }
 
 func (p *Server) CreateNewProject(
@@ -28,7 +29,7 @@ func (p *Server) CreateNewProject(
 ) (*projectpb.CreateNewProjectResponse, error) {
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
-		log.Printf("could not find claims from token")
+		p.logger.Error("could not find claims from token")
 		return nil, auth.ErrNoTokenClaims
 	}
 
@@ -74,7 +75,7 @@ func (p *Server) GetProjectKey(
 ) (*projectpb.GetProjectKeyResponse, error) {
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
-		log.Printf("could not find claims from token")
+		p.logger.Error("could not find claims from token")
 		return nil, auth.ErrNoTokenClaims
 	}
 
@@ -105,6 +106,11 @@ func (p *Server) GetProjectKey(
 func NewProjectServer(
 	projectDataRepo DataRepository,
 	userDataRepo user.DataRepository,
+	logger logger.Logger,
 ) *Server {
-	return &Server{projectDataRepo: projectDataRepo, userDataRepo: userDataRepo}
+	return &Server{
+		projectDataRepo: projectDataRepo,
+		userDataRepo:    userDataRepo,
+		logger:          logger,
+	}
 }

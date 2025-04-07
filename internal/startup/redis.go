@@ -2,23 +2,27 @@ package startup
 
 import (
 	"context"
-	"log"
 	"os"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
+	"github.com/waduhek/flagger/internal/logger"
 )
 
-func ConnectRedis() (*redis.Client, error) {
+func ConnectRedis(logger logger.Logger) (*redis.Client, error) {
 	connectionString := os.Getenv("FLAGGER_REDIS_URI")
 
-	return connectRedisWithConnectionString(connectionString)
+	return connectRedisWithConnectionString(logger, connectionString)
 }
 
-func connectRedisWithConnectionString(connString string) (*redis.Client, error) {
+func connectRedisWithConnectionString(
+	logger logger.Logger,
+	connString string,
+) (*redis.Client, error) {
 	opt, parseErr := redis.ParseURL(connString)
 	if parseErr != nil {
-		log.Printf("error while parsing redis connection string: %v", parseErr)
+		logger.Error("error while parsing redis connection string: %v", parseErr)
 		return nil, parseErr
 	}
 
@@ -26,7 +30,7 @@ func connectRedisWithConnectionString(connString string) (*redis.Client, error) 
 
 	pingErr := pingRedis(client)
 	if pingErr != nil {
-		log.Printf("error while pinging redis: %v", pingErr)
+		logger.Error("error while pinging redis: %v", pingErr)
 		return nil, pingErr
 	}
 

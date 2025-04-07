@@ -2,11 +2,12 @@ package auth
 
 import (
 	"context"
-	"log"
 	"os"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
+
+	"github.com/waduhek/flagger/internal/logger"
 )
 
 const tokenDuration = 24 * time.Hour
@@ -21,7 +22,7 @@ type FlaggerJWTClaims struct {
 
 // CreateJWT generates a new JWT with an expiry time that is 24 hours from
 // now. It also adds the provided username to the `sub` field of the token.
-func CreateJWT(username string) (string, error) {
+func CreateJWT(logger logger.Logger, username string) (string, error) {
 	jwtSecret := os.Getenv("FLAGGER_JWT_SECRET")
 
 	now := time.Now()
@@ -42,7 +43,7 @@ func CreateJWT(username string) (string, error) {
 	tokenGenerator := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	token, err := tokenGenerator.SignedString([]byte(jwtSecret))
 	if err != nil {
-		log.Printf("could not sign jwt: %v", err)
+		logger.Error("could not sign jwt: %v", err)
 		return "", ErrJWTSign
 	}
 
@@ -52,7 +53,7 @@ func CreateJWT(username string) (string, error) {
 // VerifyJWT verifies that the provided string is valid and that it contains
 // FlaggerJWTClaims as the claims. All errors returned from this function are
 // GRPC compliant.
-func VerifyJWT(str string) (*FlaggerJWTClaims, error) {
+func VerifyJWT(logger logger.Logger, str string) (*FlaggerJWTClaims, error) {
 	jwtSecret := os.Getenv("FLAGGER_JWT_SECRET")
 
 	parsedToken, err := jwt.ParseWithClaims(
@@ -69,18 +70,18 @@ func VerifyJWT(str string) (*FlaggerJWTClaims, error) {
 		},
 	)
 	if err != nil {
-		log.Printf("error while parsing token: %v", err)
+		logger.Error("error while parsing token: %v", err)
 		return nil, err
 	}
 
 	if !parsedToken.Valid {
-		log.Println("token is not valid")
+		logger.Error("token is not valid")
 		return nil, ErrInvalidJWT
 	}
 
 	claims, ok := parsedToken.Claims.(*FlaggerJWTClaims)
 	if !ok {
-		log.Println("could not parse token claims as FlaggerJWTClaims")
+		logger.Error("could not parse token claims as FlaggerJWTClaims")
 		return nil, ErrNoTokenClaims
 	}
 

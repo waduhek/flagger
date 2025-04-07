@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/waduhek/flagger/internal/logger"
 	"github.com/waduhek/flagger/internal/startup"
 )
 
@@ -11,7 +12,7 @@ func TestSuccessfulMongoConnection(t *testing.T) {
 	connStringFilePath, _ := createConnectionStringFile("mongodb://localhost:27017")
 	t.Setenv("FLAGGER_MONGODB_CONN_FILE_PATH", connStringFilePath)
 
-	_, clientErr := startup.ConnectMongo()
+	_, clientErr := startup.ConnectMongo(&logger.StubLogger{})
 	if clientErr != nil {
 		t.Error("did not expect error when connecting to mongo")
 	}
@@ -23,7 +24,7 @@ func TestUnsuccessfulMongoConnection(t *testing.T) {
 	connStringFilePath, _ := createConnectionStringFile("http://example.com")
 	t.Setenv("FLAGGER_MONGODB_CONN_FILE_PATH", connStringFilePath)
 
-	_, clientErr := startup.ConnectMongo()
+	_, clientErr := startup.ConnectMongo(&logger.StubLogger{})
 	if clientErr == nil {
 		t.Error("expected error when connecting to mongo")
 	}

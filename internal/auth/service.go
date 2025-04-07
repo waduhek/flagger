@@ -2,17 +2,18 @@ package auth
 
 import (
 	"context"
-	"log"
 
 	"github.com/waduhek/flagger/proto/authpb"
 
 	"github.com/waduhek/flagger/internal/hash"
+	"github.com/waduhek/flagger/internal/logger"
 	"github.com/waduhek/flagger/internal/user"
 )
 
 type Server struct {
 	authpb.UnimplementedAuthServer
 	userDataRepo user.DataRepository
+	logger       logger.Logger
 }
 
 func (s *Server) CreateNewUser(
@@ -26,7 +27,7 @@ func (s *Server) CreateNewUser(
 
 	passwordHash, err := hash.GeneratePasswordHash(password)
 	if err != nil {
-		log.Printf("could not generate password hash: %v", err)
+		s.logger.Error("could not generate password hash: %v", err)
 		return nil, hash.ErrGenPasswordHash
 	}
 
@@ -45,7 +46,7 @@ func (s *Server) CreateNewUser(
 		return nil, err
 	}
 
-	log.Printf("created new user, username %s, id %s", username, newUserID)
+	s.logger.Info("created new user, username %s, id %s", username, newUserID)
 
 	response := authpb.CreateNewUserResponse{}
 
@@ -69,13 +70,13 @@ func (s *Server) Login(
 		fetchedUser.Password.Hash,
 		fetchedUser.Password.Salt,
 	) {
-		log.Printf("incorrect credentials for user \"%s\"", username)
+		s.logger.Error("incorrect credentials for user \"%s\"", username)
 		return nil, ErrIncorrectUsernameOrPassword
 	}
 
-	token, err := CreateJWT(fetchedUser.Username)
+	token, err := CreateJWT(s.logger, fetchedUser.Username)
 	if err != nil {
-		log.Printf("error while generating jwt: %v", err)
+		s.logger.Error("error while generating jwt: %v", err)
 		return nil, err
 	}
 
@@ -90,7 +91,7 @@ func (s *Server) ChangePassword(
 ) (*authpb.ChangePasswordResponse, error) {
 	claims, ok := ClaimsFromContext(ctx)
 	if !ok {
-		log.Printf("could not find claims from token")
+		s.logger.Error("could not find claims from token")
 		return nil, ErrNoTokenClaims
 	}
 
@@ -109,13 +110,13 @@ func (s *Server) ChangePassword(
 		fetchedUser.Password.Hash,
 		fetchedUser.Password.Salt,
 	) {
-		log.Printf("incorrect current password for resetting password")
+		s.logger.Error("incorrect current password for resetting password")
 		return nil, ErrIncorrectUsernameOrPassword
 	}
 
 	newPasswordHash, err := hash.GeneratePasswordHash(newPassword)
 	if err != nil {
-		log.Printf("error while hashing password: %v", err)
+		s.logger.Error("error while hashing password: %v", err)
 		return nil, hash.ErrGenPasswordHash
 	}
 
@@ -129,13 +130,13 @@ func (s *Server) ChangePassword(
 		return nil, updateErr
 	}
 
-	log.Printf("changed password for user %q", username)
+	s.logger.Info("changed password for user %q", username)
 	return &authpb.ChangePasswordResponse{}, nil
 }
 
 // NewServer creates a new server for the auth service.
-func NewServer(userDataRepo user.DataRepository) *Server {
-	server := &Server{userDataRepo: userDataRepo}
+func NewServer(userDataRepo user.DataRepository, logger logger.Logger) *Server {
+	server := &Server{userDataRepo: userDataRepo, logger: logger}
 
 	return server
 }

@@ -2,7 +2,6 @@ package environment
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/waduhek/flagger/internal/auth"
 	"github.com/waduhek/flagger/internal/flagsetting"
+	"github.com/waduhek/flagger/internal/logger"
 	"github.com/waduhek/flagger/internal/project"
 	"github.com/waduhek/flagger/internal/user"
 )
@@ -22,6 +22,7 @@ type Server struct {
 	projectDataRepo     project.DataRepository
 	flagSettingDataRepo flagsetting.DataRepository
 	environmentDataRepo DataRepository
+	logger              logger.Logger
 }
 
 func (s *Server) CreateEnvironment(
@@ -30,7 +31,7 @@ func (s *Server) CreateEnvironment(
 ) (*environmentpb.CreateEnvironmentResponse, error) {
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
-		log.Printf("could not find jwt claims in request context")
+		s.logger.Error("could not find jwt claims in request context")
 		return nil, auth.ErrNoTokenClaims
 	}
 
@@ -58,7 +59,7 @@ func (s *Server) CreateEnvironment(
 	// the environment.
 	session, err := s.mongoClient.StartSession()
 	if err != nil {
-		log.Printf("could not create a new session: %v", err)
+		s.logger.Error("could not create a new session: %v", err)
 		return nil, ErrTxnSession
 	}
 
@@ -68,14 +69,14 @@ func (s *Server) CreateEnvironment(
 		s.handleCreateEnvrionment(req, fetchedUser, fetchedProject),
 	)
 	if txnErr != nil {
-		log.Printf(
+		s.logger.Error(
 			"error while performing environment save transaction: %v",
 			txnErr,
 		)
 		return nil, txnErr
 	}
 
-	log.Printf(
+	s.logger.Info(
 		"successfully created environment %q for project %q",
 		environmentName,
 		projectName,
@@ -129,7 +130,7 @@ func (s *Server) handleCreateEnvrionment(
 				flagSettings,
 			)
 			if flagSettingSaveErr != nil {
-				log.Printf("error while saving flag settings: %v", flagSettingSaveErr)
+				s.logger.Error("error while saving flag settings: %v", flagSettingSaveErr)
 				return nil, flagSettingSaveErr
 			}
 
@@ -164,6 +165,7 @@ func NewEnvironmentServer(
 	projectDataRepo project.DataRepository,
 	flagSettingDataRepo flagsetting.DataRepository,
 	environmentDataRepo DataRepository,
+	logger logger.Logger,
 ) *Server {
 	return &Server{
 		mongoClient:         client,
@@ -171,5 +173,6 @@ func NewEnvironmentServer(
 		projectDataRepo:     projectDataRepo,
 		flagSettingDataRepo: flagSettingDataRepo,
 		environmentDataRepo: environmentDataRepo,
+		logger:              logger,
 	}
 }
