@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/waduhek/flagger/internal/environment"
+	"github.com/waduhek/flagger/internal/logger"
 )
 
 const mongoDBConnectionString string = "mongodb://localhost:27017"
@@ -257,7 +258,11 @@ func getEnvironmentRepository(mongoDatabase *mongo.Database) (environment.DataRe
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	environmentRepository, repositoryErr := environment.NewEnvironmentRepository(ctx, mongoDatabase)
+	environmentRepository, repositoryErr := environment.NewEnvironmentRepository(
+		ctx,
+		mongoDatabase,
+		&logger.StubLogger{},
+	)
 	if repositoryErr != nil {
 		return nil, repositoryErr
 	}

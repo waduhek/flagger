@@ -2,7 +2,6 @@ package flag
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -12,6 +11,7 @@ import (
 	"github.com/waduhek/flagger/internal/auth"
 	"github.com/waduhek/flagger/internal/environment"
 	"github.com/waduhek/flagger/internal/flagsetting"
+	"github.com/waduhek/flagger/internal/logger"
 	"github.com/waduhek/flagger/internal/project"
 	"github.com/waduhek/flagger/internal/user"
 )
@@ -24,6 +24,7 @@ type Server struct {
 	environmentDataRepo environment.DataRepository
 	flagDataRepo        DataRepository
 	flagSettingDataRepo flagsetting.DataRepository
+	logger              logger.Logger
 }
 
 type mongoTxnCallback func(ctx mongo.SessionContext) (interface{}, error)
@@ -35,7 +36,7 @@ func (s *Server) CreateFlag(
 	// Get the details of the currently authenticated user from the JWT.
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
-		log.Println("could not get token claims")
+		s.logger.Error("could not get token claims")
 		return nil, auth.ErrNoTokenClaims
 	}
 
@@ -64,7 +65,7 @@ func (s *Server) CreateFlag(
 	// If there are no environments configured for the project, don't allow any
 	// flags to be created.
 	if len(fetchedProject.Environments) == 0 {
-		log.Printf(
+		s.logger.Error(
 			"no environments are configured for the project %q cannot create flag",
 			projectName,
 		)
@@ -74,7 +75,7 @@ func (s *Server) CreateFlag(
 	// Start a transaction to save the flag.
 	txnSession, err := s.mongoClient.StartSession()
 	if err != nil {
-		log.Printf("could not start transaction to save flag: %v", err)
+		s.logger.Error("could not start transaction to save flag: %v", err)
 		return nil, ErrTxnSession
 	}
 
@@ -83,11 +84,11 @@ func (s *Server) CreateFlag(
 		s.handleCreateFlag(req, fetchedUser, fetchedProject),
 	)
 	if txnErr != nil {
-		log.Printf("could not complete flag save transaction: %v", err)
+		s.logger.Error("could not complete flag save transaction: %v", err)
 		return nil, txnErr
 	}
 
-	log.Printf(
+	s.logger.Info(
 		"successfully created the flag %q in project %q",
 		flagName,
 		projectName,
@@ -142,7 +143,7 @@ func (s *Server) handleCreateFlag(
 			flagSettings,
 		)
 		if err != nil {
-			log.Printf("error while saving flag settings: %v", err)
+			s.logger.Error("error while saving flag settings: %v", err)
 			return nil, err
 		}
 
@@ -177,7 +178,7 @@ func (s *Server) UpdateFlagStatus(
 	// Get the details of the currently authenticated user from the JWT.
 	jwtClaims, ok := auth.ClaimsFromContext(ctx)
 	if !ok {
-		log.Println("could not get token claims")
+		s.logger.Error("could not get token claims")
 		return nil, auth.ErrNoTokenClaims
 	}
 
@@ -236,7 +237,7 @@ func (s *Server) UpdateFlagStatus(
 	}
 
 	if updatedCount == 0 {
-		log.Printf(
+		s.logger.Error(
 			"no flag settings were updated for project %q, environment %q, flag %q",
 			projectName,
 			environmentName,
@@ -257,6 +258,7 @@ func NewFlagServer(
 	environmentDataRepo environment.DataRepository,
 	flagDataRepo DataRepository,
 	flagSettingDataRepo flagsetting.DataRepository,
+	logger logger.Logger,
 ) *Server {
 	return &Server{
 		mongoClient:         mongoClient,
@@ -265,5 +267,6 @@ func NewFlagServer(
 		environmentDataRepo: environmentDataRepo,
 		flagDataRepo:        flagDataRepo,
 		flagSettingDataRepo: flagSettingDataRepo,
+		logger:              logger,
 	}
 }

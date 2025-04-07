@@ -2,12 +2,13 @@ package user
 
 import (
 	"context"
-	"log"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/waduhek/flagger/internal/logger"
 )
 
 const userCollection string = "users"
@@ -22,7 +23,8 @@ type userMongoModel struct {
 }
 
 type MongoDataRepository struct {
-	coll *mongo.Collection
+	coll   *mongo.Collection
+	logger logger.Logger
 }
 
 func (u *MongoDataRepository) Save(
@@ -39,17 +41,17 @@ func (u *MongoDataRepository) Save(
 	result, err := u.coll.InsertOne(ctx, userToAdd)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			log.Printf("a user with username %q already exists", user.Username)
+			u.logger.Error("a user with username %q already exists", user.Username)
 			return "", ErrUsernameTaken
 		}
 
-		log.Printf("could not save user details: %v", err)
+		u.logger.Error("could not save user details: %v", err)
 		return "", ErrNotSaved
 	}
 
 	userID, userIDOk := result.InsertedID.(primitive.ObjectID)
 	if !userIDOk {
-		log.Printf("could not cast mongodb user id as objectid")
+		u.logger.Error("could not cast mongodb user id as objectid")
 		return "", ErrNotSaved
 	}
 
@@ -65,7 +67,7 @@ func (u *MongoDataRepository) GetByUsername(
 	var decodedUser userMongoModel
 	err := u.coll.FindOne(ctx, query).Decode(&decodedUser)
 	if err != nil {
-		log.Printf("error while fetching user %q: %v", username, err)
+		u.logger.Error("error while fetching user %q: %v", username, err)
 		return nil, ErrCouldNotFetch
 	}
 
@@ -96,7 +98,7 @@ func (u *MongoDataRepository) UpdatePassword(
 
 	updateResult, updateErr := u.coll.UpdateOne(ctx, filter, update)
 	if updateErr != nil {
-		log.Printf("error while saving new password: %v", updateErr)
+		u.logger.Error("error while saving new password: %v", updateErr)
 		return 0, ErrPasswordUpdate
 	}
 
@@ -119,6 +121,7 @@ func setupUserCollIndexes(ctx context.Context, coll *mongo.Collection) error {
 func NewUserRepository(
 	ctx context.Context,
 	db *mongo.Database,
+	logger logger.Logger,
 ) (*MongoDataRepository, error) {
 	coll := db.Collection(userCollection)
 
@@ -127,6 +130,6 @@ func NewUserRepository(
 		return nil, err
 	}
 
-	repo := &MongoDataRepository{coll}
+	repo := &MongoDataRepository{coll, logger}
 	return repo, nil
 }

@@ -2,40 +2,41 @@ package startup
 
 import (
 	"context"
-	"log"
 	"os"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/waduhek/flagger/internal/logger"
 )
 
 // ConnectMongo establishes a connection with the MongoDB database cluster and
 // returns the client.
-func ConnectMongo() (*mongo.Client, error) {
+func ConnectMongo(logger logger.Logger) (*mongo.Client, error) {
 	filePath := os.Getenv("FLAGGER_MONGODB_CONN_FILE_PATH")
 
-	return connectMongoWithFile(filePath)
+	return connectMongoWithFile(logger, filePath)
 }
 
-func connectMongoWithFile(filePath string) (*mongo.Client, error) {
+func connectMongoWithFile(logger logger.Logger, filePath string) (*mongo.Client, error) {
 	mongoConnectionString, getConnStringErr :=
 		getMongoConnectionStringFromFile(filePath)
 	if getConnStringErr != nil {
-		log.Printf("could not get mongo connection string: %v", getConnStringErr)
+		logger.Error("could not get mongo connection string: %v", getConnStringErr)
 		return nil, getConnStringErr
 	}
 
 	client, clientErr := getMongoClient(mongoConnectionString)
 	if clientErr != nil {
-		log.Printf("could not connect to mongo: %v", clientErr)
+		logger.Error("could not connect to mongo: %v", clientErr)
 		return nil, clientErr
 	}
 
 	pingErr := pingMongo(client)
 	if pingErr != nil {
-		log.Printf("error while pinging mongo: %v", pingErr)
+		logger.Error("error while pinging mongo: %v", pingErr)
 		return nil, pingErr
 	}
 

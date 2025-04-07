@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/waduhek/flagger/internal/logger"
 	"github.com/waduhek/flagger/internal/project"
 	"github.com/waduhek/flagger/internal/user"
 )
@@ -401,7 +402,11 @@ func getProjectRepository(mongoDatabase *mongo.Database) (project.DataRepository
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	flagRepository, repositoryErr := project.NewProjectRepository(ctx, mongoDatabase)
+	flagRepository, repositoryErr := project.NewProjectRepository(
+		ctx,
+		mongoDatabase,
+		&logger.StubLogger{},
+	)
 	if repositoryErr != nil {
 		return nil, repositoryErr
 	}

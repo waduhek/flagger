@@ -208,6 +208,7 @@ linters:
         "non-main files":
           files:
             - "!**/main.go"
+            - "!**/*_test.go"
           deny:
             - pkg: log$
               desc: Use log/slog instead, see https://go.dev/blog/slog

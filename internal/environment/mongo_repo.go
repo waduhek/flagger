@@ -3,9 +3,9 @@ package environment
 import (
 	"context"
 	"errors"
-	"log"
 	"time"
 
+	"github.com/waduhek/flagger/internal/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -25,7 +25,8 @@ type environmentMongoModel struct {
 const environmentCollection string = "environments"
 
 type MongoDataRepository struct {
-	coll *mongo.Collection
+	coll   *mongo.Collection
+	logger logger.Logger
 }
 
 func (r *MongoDataRepository) Save(
@@ -34,13 +35,13 @@ func (r *MongoDataRepository) Save(
 ) (string, error) {
 	projectIDObjID, projectIDObjIDErr := primitive.ObjectIDFromHex(environment.ProjectID)
 	if projectIDObjIDErr != nil {
-		log.Printf("could not convert project id to object id: %v", projectIDObjIDErr)
+		r.logger.Error("could not convert project id to object id: %v", projectIDObjIDErr)
 		return "", ErrCouldNotSave
 	}
 
 	createdByObjID, createdByObjIDErr := primitive.ObjectIDFromHex(environment.CreatedBy)
 	if createdByObjIDErr != nil {
-		log.Printf("could not convert created by id to object id: %v", createdByObjIDErr)
+		r.logger.Error("could not convert created by id to object id: %v", createdByObjIDErr)
 		return "", ErrCouldNotSave
 	}
 
@@ -54,17 +55,17 @@ func (r *MongoDataRepository) Save(
 	saveResult, saveErr := r.coll.InsertOne(ctx, environmentToAdd)
 	if saveErr != nil {
 		if mongo.IsDuplicateKeyError(saveErr) {
-			log.Printf("an environment with name %q exists", environment.Name)
+			r.logger.Error("an environment with name %q exists", environment.Name)
 			return "", ErrNameTaken
 		}
 
-		log.Printf("error occurred while saving environment: %v", saveErr)
+		r.logger.Error("error occurred while saving environment: %v", saveErr)
 		return "", ErrCouldNotSave
 	}
 
 	environmentID, ok := saveResult.InsertedID.(primitive.ObjectID)
 	if !ok {
-		log.Printf("could not assert saved environment id as object id")
+		r.logger.Error("could not assert saved environment id as object id")
 		return "", ErrCouldNotSave
 	}
 
@@ -77,7 +78,7 @@ func (r *MongoDataRepository) GetByID(
 ) (*Environment, error) {
 	environmentID, environmentIDErr := primitive.ObjectIDFromHex(id)
 	if environmentIDErr != nil {
-		log.Printf("error while converting environment id to object id: %v", environmentIDErr)
+		r.logger.Error("error while converting environment id to object id: %v", environmentIDErr)
 		return nil, ErrCouldNotFetch
 	}
 
@@ -88,11 +89,11 @@ func (r *MongoDataRepository) GetByID(
 	err := r.coll.FindOne(ctx, query).Decode(&decodedEnvironment)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			log.Printf("no environment with the id %q was found: %v", id, err)
+			r.logger.Error("no environment with the id %q was found: %v", id, err)
 			return nil, ErrNotFound
 		}
 
-		log.Printf("error occurred while fetching environment: %v", err)
+		r.logger.Error("error occurred while fetching environment: %v", err)
 		return nil, ErrCouldNotFetch
 	}
 
@@ -106,7 +107,7 @@ func (r *MongoDataRepository) GetByNameAndProjectID(
 ) (*Environment, error) {
 	projectIDObjID, projectIDObjIDErr := primitive.ObjectIDFromHex(projectID)
 	if projectIDObjIDErr != nil {
-		log.Printf("could not convert project id to object id: %v", projectIDObjIDErr)
+		r.logger.Error("could not convert project id to object id: %v", projectIDObjIDErr)
 		return nil, ErrCouldNotFetch
 	}
 
@@ -120,7 +121,7 @@ func (r *MongoDataRepository) GetByNameAndProjectID(
 	err := r.coll.FindOne(ctx, query).Decode(&decodedEnvironment)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			log.Printf(
+			r.logger.Error(
 				"no environment with the environment name %v and project ID %v: %v",
 				environmentName,
 				projectID,
@@ -129,7 +130,7 @@ func (r *MongoDataRepository) GetByNameAndProjectID(
 			return nil, ErrNotFound
 		}
 
-		log.Printf("error occurred while fetching environment: %v", err)
+		r.logger.Error("error occurred while fetching environment: %v", err)
 		return nil, ErrCouldNotFetch
 	}
 
@@ -166,6 +167,7 @@ func setupCollIndexes(
 func NewEnvironmentRepository(
 	ctx context.Context,
 	db *mongo.Database,
+	logger logger.Logger,
 ) (*MongoDataRepository, error) {
 	coll := db.Collection(environmentCollection)
 
@@ -174,5 +176,5 @@ func NewEnvironmentRepository(
 		return nil, err
 	}
 
-	return &MongoDataRepository{coll}, nil
+	return &MongoDataRepository{coll, logger}, nil
 }

@@ -5,11 +5,16 @@ import (
 	"strings"
 
 	"google.golang.org/grpc"
+
+	"github.com/waduhek/flagger/internal/logger"
 )
 
 // KeyUnaryInterceptor intercepts an incoming request to the provided server
 // path and ensures that the request contains the project key in the metadata.
-func KeyUnaryInterceptor(serverPath string) grpc.UnaryServerInterceptor {
+func KeyUnaryInterceptor(
+	logger logger.Logger,
+	serverPath string,
+) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req any,
@@ -20,7 +25,7 @@ func KeyUnaryInterceptor(serverPath string) grpc.UnaryServerInterceptor {
 			return handler(ctx, req)
 		}
 
-		newCtx, err := AuthoriseProject(ctx)
+		newCtx, err := AuthoriseProject(ctx, logger)
 		if err != nil {
 			return nil, err
 		}

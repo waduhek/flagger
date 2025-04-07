@@ -2,13 +2,14 @@ package flagsetting
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/waduhek/flagger/internal/logger"
 )
 
 const flagSettingCollection string = "flag_settings"
@@ -26,14 +27,15 @@ type flagSettingMongoModel struct {
 }
 
 type MongoDataRepository struct {
-	coll *mongo.Collection
+	coll   *mongo.Collection
+	logger logger.Logger
 }
 
 func (r *MongoDataRepository) Save(
 	ctx context.Context,
 	flagSetting *FlagSetting,
 ) (string, error) {
-	flagSettingToSave, createErr := createNewFlagSetting(flagSetting)
+	flagSettingToSave, createErr := r.createNewFlagSetting(flagSetting)
 	if createErr != nil {
 		return "", createErr
 	}
@@ -41,9 +43,9 @@ func (r *MongoDataRepository) Save(
 	saveResult, saveErr := r.coll.InsertOne(ctx, flagSettingToSave)
 	if saveErr != nil {
 		if mongo.IsDuplicateKeyError(saveErr) {
-			log.Printf("got duplicate key error when saving flag setting: %v", saveErr)
+			r.logger.Error("got duplicate key error when saving flag setting: %v", saveErr)
 		} else {
-			log.Printf("error while saving flag setting: %v", saveErr)
+			r.logger.Error("error while saving flag setting: %v", saveErr)
 		}
 
 		return "", ErrCouldNotSave
@@ -51,7 +53,7 @@ func (r *MongoDataRepository) Save(
 
 	flagSettingID, ok := saveResult.InsertedID.(primitive.ObjectID)
 	if !ok {
-		log.Printf("could not assert saved flag setting id as object id")
+		r.logger.Error("could not assert saved flag setting id as object id")
 		return "", ErrCouldNotSave
 	}
 
@@ -64,7 +66,7 @@ func (r *MongoDataRepository) SaveMany(
 ) ([]string, error) {
 	toInsert := make([]interface{}, 0, len(flagSettings))
 	for _, setting := range flagSettings {
-		mongoModel, err := createNewFlagSetting(&setting)
+		mongoModel, err := r.createNewFlagSetting(&setting)
 		if err != nil {
 			return []string{}, err
 		}
@@ -75,9 +77,9 @@ func (r *MongoDataRepository) SaveMany(
 	saveResult, saveErr := r.coll.InsertMany(ctx, toInsert)
 	if saveErr != nil {
 		if mongo.IsDuplicateKeyError(saveErr) {
-			log.Printf("got duplicate key error while saving flag settings: %v", saveErr)
+			r.logger.Error("got duplicate key error while saving flag settings: %v", saveErr)
 		} else {
-			log.Printf("error while saving flag settings: %v", saveErr)
+			r.logger.Error("error while saving flag settings: %v", saveErr)
 		}
 
 		return []string{}, ErrCouldNotSave
@@ -87,7 +89,7 @@ func (r *MongoDataRepository) SaveMany(
 	for _, id := range saveResult.InsertedIDs {
 		flagSettingID, ok := id.(primitive.ObjectID)
 		if !ok {
-			log.Printf("could not assert save flag setting id as object id")
+			r.logger.Error("could not assert save flag setting id as object id")
 			return []string{}, ErrCouldNotSave
 		}
 
@@ -97,22 +99,22 @@ func (r *MongoDataRepository) SaveMany(
 	return savedIDs, nil
 }
 
-func createNewFlagSetting(flagSetting *FlagSetting) (*flagSettingMongoModel, error) {
+func (r *MongoDataRepository) createNewFlagSetting(flagSetting *FlagSetting) (*flagSettingMongoModel, error) {
 	projectIDObjID, projectIDErr := primitive.ObjectIDFromHex(flagSetting.ProjectID)
 	if projectIDErr != nil {
-		log.Printf("could not convert project id to object id: %v", projectIDErr)
+		r.logger.Error("could not convert project id to object id: %v", projectIDErr)
 		return nil, ErrCouldNotSave
 	}
 
 	environmentIDObjID, environmentIDErr := primitive.ObjectIDFromHex(flagSetting.EnvironmentID)
 	if environmentIDErr != nil {
-		log.Printf("could not convert environment id to object id: %v", environmentIDErr)
+		r.logger.Error("could not convert environment id to object id: %v", environmentIDErr)
 		return nil, ErrCouldNotSave
 	}
 
 	flagIDObjID, flagIDErr := primitive.ObjectIDFromHex(flagSetting.FlagID)
 	if flagIDErr != nil {
-		log.Printf("could not convert flag id to object id: %v", flagIDErr)
+		r.logger.Error("could not convert flag id to object id: %v", flagIDErr)
 		return nil, ErrCouldNotSave
 	}
 
@@ -136,19 +138,19 @@ func (r *MongoDataRepository) Get(
 ) (*FlagSetting, error) {
 	projectIDObjID, projectIDErr := primitive.ObjectIDFromHex(projectID)
 	if projectIDErr != nil {
-		log.Printf("could not convert project id to object id: %v", projectIDErr)
+		r.logger.Error("could not convert project id to object id: %v", projectIDErr)
 		return nil, ErrCouldNotGet
 	}
 
 	environmentIDObjID, environmentIDErr := primitive.ObjectIDFromHex(environmentID)
 	if environmentIDErr != nil {
-		log.Printf("could not convert environment id to object id: %v", environmentIDErr)
+		r.logger.Error("could not convert environment id to object id: %v", environmentIDErr)
 		return nil, ErrCouldNotGet
 	}
 
 	flagIDObjID, flagIDErr := primitive.ObjectIDFromHex(flagID)
 	if flagIDErr != nil {
-		log.Printf("could not convert flag id to object id: %v", flagIDErr)
+		r.logger.Error("could not convert flag id to object id: %v", flagIDErr)
 		return nil, ErrCouldNotGet
 	}
 
@@ -187,19 +189,19 @@ func (r *MongoDataRepository) UpdateIsActive(
 ) (uint, error) {
 	projectIDObjID, projectIDErr := primitive.ObjectIDFromHex(projectID)
 	if projectIDErr != nil {
-		log.Printf("could not convert project id to object id: %v", projectIDErr)
+		r.logger.Error("could not convert project id to object id: %v", projectIDErr)
 		return 0, ErrStatusUpdate
 	}
 
 	environmentIDObjID, environmentIDErr := primitive.ObjectIDFromHex(environmentID)
 	if environmentIDErr != nil {
-		log.Printf("could not convert environment id to object id: %v", environmentIDErr)
+		r.logger.Error("could not convert environment id to object id: %v", environmentIDErr)
 		return 0, ErrStatusUpdate
 	}
 
 	flagIDObjID, flagIDErr := primitive.ObjectIDFromHex(flagID)
 	if flagIDErr != nil {
-		log.Printf("could not convert flag id to object id: %v", flagIDErr)
+		r.logger.Error("could not convert flag id to object id: %v", flagIDErr)
 		return 0, ErrStatusUpdate
 	}
 
@@ -215,7 +217,7 @@ func (r *MongoDataRepository) UpdateIsActive(
 
 	updateResult, updateErr := r.coll.UpdateOne(ctx, filter, update)
 	if updateErr != nil {
-		log.Printf("could not update status of flag setting: %v", updateErr)
+		r.logger.Error("could not update status of flag setting: %v", updateErr)
 		return 0, ErrStatusUpdate
 	}
 
@@ -243,6 +245,7 @@ func setupIndexes(ctx context.Context, coll *mongo.Collection) error {
 func NewFlagSettingRepository(
 	ctx context.Context,
 	db *mongo.Database,
+	logger logger.Logger,
 ) (*MongoDataRepository, error) {
 	coll := db.Collection(flagSettingCollection)
 
@@ -251,5 +254,5 @@ func NewFlagSettingRepository(
 		return nil, err
 	}
 
-	return &MongoDataRepository{coll}, nil
+	return &MongoDataRepository{coll, logger}, nil
 }

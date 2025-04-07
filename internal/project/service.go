@@ -2,11 +2,11 @@ package project
 
 import (
 	"context"
-	"math/rand"
+	"math/rand/v2"
 )
 
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const lettersLen = len(letters)
+const lettersLen = int32(len(letters))
 
 // projectKey is the key for storing the project key in the request context.
 type projectKey struct{}
@@ -17,7 +17,7 @@ func generateProjectKey(n uint) string {
 
 	for i := range b {
 		//nolint:gosec // TODO: Think about how to generate a more unique key.
-		b[i] = letters[rand.Intn(lettersLen)]
+		b[i] = letters[rand.Int32N(lettersLen)]
 	}
 
 	return string(b)

@@ -3,9 +3,9 @@ package flag
 import (
 	"context"
 	"errors"
-	"log"
 	"time"
 
+	"github.com/waduhek/flagger/internal/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -24,7 +24,8 @@ type flagMongoModel struct {
 }
 
 type MongoDataRepository struct {
-	coll *mongo.Collection
+	coll   *mongo.Collection
+	logger logger.Logger
 }
 
 func (r *MongoDataRepository) Save(
@@ -33,13 +34,13 @@ func (r *MongoDataRepository) Save(
 ) (string, error) {
 	projectIDObjID, projectIDErr := primitive.ObjectIDFromHex(flag.ProjectID)
 	if projectIDErr != nil {
-		log.Printf("could not convert project id to object id: %v", projectIDErr)
+		r.logger.Error("could not convert project id to object id: %v", projectIDErr)
 		return "", ErrCouldNotSave
 	}
 
 	userIDObjID, userIDErr := primitive.ObjectIDFromHex(flag.CreatedBy)
 	if userIDErr != nil {
-		log.Printf("could not convert user id to object id: %v", userIDErr)
+		r.logger.Error("could not convert user id to object id: %v", userIDErr)
 		return "", ErrCouldNotSave
 	}
 
@@ -53,17 +54,17 @@ func (r *MongoDataRepository) Save(
 	saveResult, saveErr := r.coll.InsertOne(ctx, flagToSave)
 	if saveErr != nil {
 		if mongo.IsDuplicateKeyError(saveErr) {
-			log.Printf("flag name is taken: %v", saveErr)
+			r.logger.Error("flag name is taken: %v", saveErr)
 			return "", ErrNameTaken
 		}
 
-		log.Printf("error while saving flag: %v", saveErr)
+		r.logger.Error("error while saving flag: %v", saveErr)
 		return "", ErrCouldNotSave
 	}
 
 	savedFlagID, ok := saveResult.InsertedID.(primitive.ObjectID)
 	if !ok {
-		log.Printf("could not assert saved flag id as object id")
+		r.logger.Error("could not assert saved flag id as object id")
 		return "", ErrCouldNotSave
 	}
 
@@ -76,7 +77,7 @@ func (r *MongoDataRepository) GetByID(
 ) (*Flag, error) {
 	flagIDObjID, flagIDErr := primitive.ObjectIDFromHex(flagID)
 	if flagIDErr != nil {
-		log.Printf("could not convert flag id to object id: %v", flagIDErr)
+		r.logger.Error("could not convert flag id to object id: %v", flagIDErr)
 		return nil, ErrCouldNotFetch
 	}
 
@@ -87,7 +88,7 @@ func (r *MongoDataRepository) GetByID(
 	err := r.coll.FindOne(ctx, query).Decode(&decodedFlag)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			log.Printf("flag not found with id %v", flagID)
+			r.logger.Error("flag not found with id %v", flagID)
 			return nil, ErrNotFound
 		}
 
@@ -104,7 +105,7 @@ func (r *MongoDataRepository) GetByNameAndProjectID(
 ) (*Flag, error) {
 	projectIDObjID, projectIDErr := primitive.ObjectIDFromHex(projectID)
 	if projectIDErr != nil {
-		log.Printf("could not convert project id to object id: %v", projectIDErr)
+		r.logger.Error("could not convert project id to object id: %v", projectIDErr)
 		return nil, ErrCouldNotFetch
 	}
 
@@ -118,11 +119,11 @@ func (r *MongoDataRepository) GetByNameAndProjectID(
 	err := r.coll.FindOne(ctx, query).Decode(&decodedFlag)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			log.Printf("no flag found with name %q and project id %q", flagName, projectID)
+			r.logger.Error("no flag found with name %q and project id %q", flagName, projectID)
 			return nil, ErrNotFound
 		}
 
-		log.Printf("error while getting flag: %v", err)
+		r.logger.Error("error while getting flag: %v", err)
 		return nil, err
 	}
 
@@ -156,6 +157,7 @@ func setupCollIndexes(ctx context.Context, coll *mongo.Collection) error {
 func NewFlagRepository(
 	ctx context.Context,
 	db *mongo.Database,
+	logger logger.Logger,
 ) (*MongoDataRepository, error) {
 	coll := db.Collection(flagCollection)
 
@@ -164,5 +166,5 @@ func NewFlagRepository(
 		return nil, err
 	}
 
-	return &MongoDataRepository{coll}, nil
+	return &MongoDataRepository{coll, logger}, nil
 }

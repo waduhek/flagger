@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/waduhek/flagger/internal/flag"
+	"github.com/waduhek/flagger/internal/logger"
 )
 
 const mongoDBConnectionString string = "mongodb://localhost:27017"
@@ -229,7 +230,11 @@ func getFlagRepository(mongoDatabase *mongo.Database) (flag.DataRepository, erro
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	flagRepository, repositoryErr := flag.NewFlagRepository(ctx, mongoDatabase)
+	flagRepository, repositoryErr := flag.NewFlagRepository(
+		ctx,
+		mongoDatabase,
+		&logger.StubLogger{},
+	)
 	if repositoryErr != nil {
 		return nil, repositoryErr
 	}

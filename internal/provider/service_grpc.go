@@ -3,12 +3,12 @@ package provider
 import (
 	"context"
 	"errors"
-	"log"
 
 	"github.com/redis/go-redis/v9"
 
 	"github.com/waduhek/flagger/proto/providerpb"
 
+	"github.com/waduhek/flagger/internal/logger"
 	"github.com/waduhek/flagger/internal/project"
 )
 
@@ -17,6 +17,7 @@ type FlagProviderServer struct {
 	providerpb.UnimplementedFlagProviderServer
 	providerDataRepo  DataRepository
 	providerCacheRepo CacheRepository
+	logger            logger.Logger
 }
 
 func (s *FlagProviderServer) GetFlag(
@@ -25,7 +26,7 @@ func (s *FlagProviderServer) GetFlag(
 ) (*providerpb.GetFlagResponse, error) {
 	projectKey, ok := project.KeyFromContext(ctx)
 	if !ok {
-		log.Printf("could not find project key in request")
+		s.logger.Error("could not find project key in request")
 		return nil, project.ErrProjectKeyNotFound
 	}
 
@@ -37,7 +38,7 @@ func (s *FlagProviderServer) GetFlag(
 	}
 
 	if isFlagStatusCached {
-		log.Printf("found cached value for flag status")
+		s.logger.Info("found cached value for flag status")
 
 		cachedStatus, cachedStatusErr := s.getCachedFlagStatus(ctx, projectKey, req)
 		if cachedStatusErr != nil {
@@ -61,12 +62,12 @@ func (s *FlagProviderServer) GetFlag(
 		flagName,
 	)
 	if err != nil {
-		log.Printf("error while fetching details of the flag: %v", err)
+		s.logger.Error("error while fetching details of the flag: %v", err)
 		return nil, ErrFetchFlagDetails
 	}
 
 	if len(flagDetails) != 1 {
-		log.Printf("found %d responses of flag details", len(flagDetails))
+		s.logger.Error("found %d responses of flag details", len(flagDetails))
 		return nil, ErrIncorrectFlagDetailCount
 	}
 
@@ -82,7 +83,7 @@ func (s *FlagProviderServer) GetFlag(
 
 	cacheErr := s.providerCacheRepo.CacheFlagStatus(ctx, &cacheParams, status)
 	if cacheErr != nil {
-		log.Printf("could not cache flag status: %v. ignoring error", cacheErr)
+		s.logger.Warn("could not cache flag status: %v. ignoring error", cacheErr)
 	}
 
 	response := &providerpb.GetFlagResponse{
@@ -110,7 +111,7 @@ func (s *FlagProviderServer) checkIfFlagStatusIsCached(
 
 	statusExists, err := s.providerCacheRepo.IsFlagStatusCached(ctx, &cacheParams)
 	if err != nil {
-		log.Printf(
+		s.logger.Error(
 			"error occurred while checking if flag status is cached: %v",
 			err,
 		)
@@ -138,7 +139,7 @@ func (s *FlagProviderServer) getCachedFlagStatus(
 	cachedStatus, err := s.providerCacheRepo.GetFlagStatus(ctx, &cacheParams)
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			log.Print("Could not find cached flag status")
+			s.logger.Error("Could not find cached flag status")
 			return false, nil
 		}
 
@@ -151,9 +152,11 @@ func (s *FlagProviderServer) getCachedFlagStatus(
 func NewFlagProviderServer(
 	providerDataRepo DataRepository,
 	providerCacheRepo CacheRepository,
+	logger logger.Logger,
 ) *FlagProviderServer {
 	return &FlagProviderServer{
 		providerDataRepo:  providerDataRepo,
 		providerCacheRepo: providerCacheRepo,
+		logger:            logger,
 	}
 }

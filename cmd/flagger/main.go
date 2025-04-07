@@ -28,23 +28,27 @@ import (
 	"github.com/waduhek/flagger/internal/environment"
 	"github.com/waduhek/flagger/internal/flag"
 	"github.com/waduhek/flagger/internal/flagsetting"
+	"github.com/waduhek/flagger/internal/logger"
 	"github.com/waduhek/flagger/internal/project"
 	"github.com/waduhek/flagger/internal/provider"
 	"github.com/waduhek/flagger/internal/startup"
 	"github.com/waduhek/flagger/internal/user"
 )
 
+//nolint:gochecknoglobals // This variable will not be re-initialised.
+var loggerImpl = logger.CreateLogger()
+
 func initAuthServer(db *mongo.Database) *auth.Server {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	userRepo, err := user.NewUserRepository(ctx, db)
+	userRepo, err := user.NewUserRepository(ctx, db, loggerImpl)
 	if err != nil {
 		log.Panicf("could not initialise user repository: %v", err)
 	}
 
-	authServer := auth.NewServer(userRepo)
+	authServer := auth.NewServer(userRepo, loggerImpl)
 
 	return authServer
 }
@@ -54,17 +58,17 @@ func initProjectServer(db *mongo.Database) *project.Server {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	projectRepo, err := project.NewProjectRepository(ctx, db)
+	projectRepo, err := project.NewProjectRepository(ctx, db, loggerImpl)
 	if err != nil {
 		log.Panicf("could not initialise project repository: %v", err)
 	}
 
-	userRepo, err := user.NewUserRepository(ctx, db)
+	userRepo, err := user.NewUserRepository(ctx, db, loggerImpl)
 	if err != nil {
 		log.Panicf("could not initialise user repository: %v", err)
 	}
 
-	return project.NewProjectServer(projectRepo, userRepo)
+	return project.NewProjectServer(projectRepo, userRepo, loggerImpl)
 }
 
 func initEnvironmentServer(
@@ -75,22 +79,30 @@ func initEnvironmentServer(
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	userRepo, err := user.NewUserRepository(ctx, db)
+	userRepo, err := user.NewUserRepository(ctx, db, loggerImpl)
 	if err != nil {
 		log.Panicf("could not initialise user repository: %v", err)
 	}
 
-	projectRepo, err := project.NewProjectRepository(ctx, db)
+	projectRepo, err := project.NewProjectRepository(ctx, db, loggerImpl)
 	if err != nil {
 		log.Panicf("could not initialise project repository: %v", err)
 	}
 
-	flagSettingRepo, err := flagsetting.NewFlagSettingRepository(ctx, db)
+	flagSettingRepo, err := flagsetting.NewFlagSettingRepository(
+		ctx,
+		db,
+		loggerImpl,
+	)
 	if err != nil {
 		log.Panicf("could not initialise flag setting repository: %v", err)
 	}
 
-	environmentRepo, err := environment.NewEnvironmentRepository(ctx, db)
+	environmentRepo, err := environment.NewEnvironmentRepository(
+		ctx,
+		db,
+		loggerImpl,
+	)
 	if err != nil {
 		log.Panicf("could not initialise environment repository: %v", err)
 	}
@@ -101,6 +113,7 @@ func initEnvironmentServer(
 		projectRepo,
 		flagSettingRepo,
 		environmentRepo,
+		loggerImpl,
 	)
 }
 
@@ -109,27 +122,35 @@ func initFlagServer(client *mongo.Client, db *mongo.Database) *flag.Server {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	userRepo, err := user.NewUserRepository(ctx, db)
+	userRepo, err := user.NewUserRepository(ctx, db, loggerImpl)
 	if err != nil {
 		log.Panicf("could not initialise user repository: %v", err)
 	}
 
-	projectRepo, err := project.NewProjectRepository(ctx, db)
+	projectRepo, err := project.NewProjectRepository(ctx, db, loggerImpl)
 	if err != nil {
 		log.Panicf("could not initialise project repository: %v", err)
 	}
 
-	flagRepo, err := flag.NewFlagRepository(ctx, db)
+	flagRepo, err := flag.NewFlagRepository(ctx, db, loggerImpl)
 	if err != nil {
 		log.Panicf("could not initialise flag repository: %v", err)
 	}
 
-	flagSettingRepo, err := flagsetting.NewFlagSettingRepository(ctx, db)
+	flagSettingRepo, err := flagsetting.NewFlagSettingRepository(
+		ctx,
+		db,
+		loggerImpl,
+	)
 	if err != nil {
 		log.Panicf("could not initialise flag setting repository: %v", err)
 	}
 
-	environmentRepo, err := environment.NewEnvironmentRepository(ctx, db)
+	environmentRepo, err := environment.NewEnvironmentRepository(
+		ctx,
+		db,
+		loggerImpl,
+	)
 	if err != nil {
 		log.Panicf("could not initialise environment repository: %v", err)
 	}
@@ -141,6 +162,7 @@ func initFlagServer(client *mongo.Client, db *mongo.Database) *flag.Server {
 		environmentRepo,
 		flagRepo,
 		flagSettingRepo,
+		loggerImpl,
 	)
 }
 
@@ -151,7 +173,7 @@ func initFlagProviderServer(
 	providerRepo := provider.NewProviderRepository(db)
 	cacheRepo := provider.NewProviderCacheRepository(redisClient)
 
-	return provider.NewFlagProviderServer(providerRepo, cacheRepo)
+	return provider.NewFlagProviderServer(providerRepo, cacheRepo, loggerImpl)
 }
 
 func gracefulShutdown(cleanup func()) {
@@ -177,13 +199,13 @@ func main() {
 		log.Panicf("could not listen on port %d: %v", serverPort, lisErr)
 	}
 
-	mongoClient, mongoClientErr := startup.ConnectMongo()
+	mongoClient, mongoClientErr := startup.ConnectMongo(loggerImpl)
 	if mongoClientErr != nil {
 		panic(mongoClientErr)
 	}
 	mongoDB := mongoClient.Database(flaggerDB)
 
-	redisClient, redisClientErr := startup.ConnectRedis()
+	redisClient, redisClientErr := startup.ConnectRedis(loggerImpl)
 	if redisClientErr != nil {
 		panic(redisClientErr)
 	}
@@ -197,13 +219,14 @@ func main() {
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			auth.UnaryServerInterceptor,
-			auth.AuthoriseRequestInterceptor("/projectpb.Project/"),
+			auth.UnaryServerInterceptor(loggerImpl),
+			auth.AuthoriseRequestInterceptor(loggerImpl, "/projectpb.Project/"),
 			auth.AuthoriseRequestInterceptor(
+				loggerImpl,
 				"/environmentpb.Environment/",
 			),
-			auth.AuthoriseRequestInterceptor("/flagpb.Flag/"),
-			project.KeyUnaryInterceptor("/providerpb.FlagProvider/"),
+			auth.AuthoriseRequestInterceptor(loggerImpl, "/flagpb.Flag/"),
+			project.KeyUnaryInterceptor(loggerImpl, "/providerpb.FlagProvider/"),
 		),
 	)
 	// Registering servers
