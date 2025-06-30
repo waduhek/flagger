@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.2
-	github.com/redis/go-redis/v9 v9.10.0
+	github.com/redis/go-redis/v9 v9.11.0
 	go.mongodb.org/mongo-driver v1.17.4
 	golang.org/x/crypto v0.39.0
 	google.golang.org/grpc v1.73.0
