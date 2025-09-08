@@ -1,5 +1,5 @@
 # --- Development container image ---
-FROM golang:1.25.0 AS dev
+FROM golang:1.25.1 AS dev
 WORKDIR /go/github.com/waduhek/flagger
 COPY . .
 RUN go build -o ./build/flagger ./cmd/flagger
@@ -7,7 +7,7 @@ EXPOSE 50051
 CMD ["./build/flagger"]
 
 # --- Debug container image ---
-FROM golang:1.25.0 AS debug
+FROM golang:1.25.1 AS debug
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 WORKDIR /go/github.com/waduhek/flagger
 COPY . .
